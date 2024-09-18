@@ -1,7 +1,9 @@
 import { Role } from 'src/constants';
 
-export class CreateUserDto {
+export class UserDto {
+  id: number;
   username: string;
+  email: string;
   password: string;
-  role: Role;
+  role: Role | null;
 }
