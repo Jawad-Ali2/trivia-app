@@ -61,7 +61,12 @@ export class AuthController {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     });
 
-    return res.status(200).json({ message: 'Tokens set in cookies' });
+    return res
+      .status(200)
+      .json({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
   }
 
   @Public()
@@ -84,10 +89,9 @@ export class AuthController {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
     // If a guest user tries to refresh token they immediately gets error and log em out
-    if(!refreshToken) return;
-    
-    const tokens = await this.authService.refreshAccessToken(refreshToken);
+    if (!refreshToken) return;
 
+    const tokens = await this.authService.refreshAccessToken(refreshToken);
 
     res.cookie('at', tokens.accessToken, {
       httpOnly: true,

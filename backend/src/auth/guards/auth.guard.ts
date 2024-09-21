@@ -37,8 +37,6 @@ export class AuthGuard implements CanActivate {
         secret: jwtConstants.secret,
       });
       console.log(token)
-      // 💡 We're assigning the payload to the request object here
-      // so that we can access it in our route handlers
       request['user'] = payload;
     } catch(err) {
       console.log(err)
