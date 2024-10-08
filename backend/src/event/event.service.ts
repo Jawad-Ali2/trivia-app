@@ -55,6 +55,7 @@ export class EventService {
       maxPlayers: roomSize,
     });
 
+    client.emit('roomJoined', roomId)
     client.join(roomId);
 
     return 'Room has been created!';

@@ -7,11 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/user/entities/user.entity';
-import { Repository, TypeORMError } from 'typeorm';
+import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { jwtConstants } from './constants';
 import { Tokens } from './types/auth.types';
-import { UserDto } from 'src/user/dto/user.dto';
 
 @Injectable()
 export class AuthService {
@@ -56,15 +55,21 @@ export class AuthService {
       },
     });
 
+    if (!user) throw new NotFoundException('User not found');
+
     const passwordMatched = await user.isMatch(userPassword);
 
-    if (!passwordMatched) throw new NotFoundException();
+    if (!passwordMatched) throw new NotFoundException('Wrong credentials.');
 
     const tokens = await this.generateTokens(
       user.id,
       user.username,
       user.email,
     );
+
+    user.refreshToken = tokens.refreshToken;
+
+    await this.userRepository.save(user);
 
     return tokens;
   }
@@ -86,10 +91,11 @@ export class AuthService {
       secret: jwtConstants.secret,
     });
 
-    const user = await this.userRepository.findOneBy({ id: decodedToken.id });
+    const user = await this.userRepository.findOneBy({ id: decodedToken.sub });
 
     if (!user) throw new NotFoundException('User not found or invalid token');
 
+    console.log(refreshToken, '&&&&&', user);
     if (refreshToken !== user.refreshToken)
       throw new UnauthorizedException('Invalid refresh token');
 
@@ -98,6 +104,10 @@ export class AuthService {
       user.username,
       user.email,
     );
+
+    user.refreshToken = tokens.refreshToken;
+
+    await this.userRepository.save(user);
 
     return tokens;
   }
@@ -123,6 +133,7 @@ export class AuthService {
         expiresIn: '7d',
       }),
     ]);
+
     return {
       accessToken,
       refreshToken,

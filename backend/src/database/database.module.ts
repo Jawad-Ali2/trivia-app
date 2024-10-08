@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
-import { DatabaseService } from './database.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { DatabaseController } from './database.controller';
-import { User } from 'src/user/entities/user.entity';
 
 @Module({
   imports: [
@@ -24,7 +21,5 @@ import { User } from 'src/user/entities/user.entity';
       },
     }),
   ],
-  controllers: [DatabaseController],
-  providers: [DatabaseService],
 })
 export class DatabaseModule {}

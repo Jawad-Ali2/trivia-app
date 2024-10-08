@@ -61,12 +61,10 @@ export class AuthController {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     });
 
-    return res
-      .status(200)
-      .json({
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      });
+    return res.status(200).json({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    });
   }
 
   @Public()
@@ -84,9 +82,11 @@ export class AuthController {
     return;
   }
 
+  @Public()
   @Post('refresh-token')
   async refreshAccessToken(@Req() req: Request, @Res() res: Response) {
-    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    console.log(req.cookies.rt);
+    const refreshToken = req.cookies?.rt || req.body.refreshToken;
 
     // If a guest user tries to refresh token they immediately gets error and log em out
     if (!refreshToken) return;
@@ -104,7 +104,13 @@ export class AuthController {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     });
 
-    return res.status(200).json({ message: 'Tokens set in cookies' });
+    return res
+      .status(200)
+      .json({
+        message: 'Tokens set in cookies',
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
   }
 
   @Get('admin')
@@ -113,8 +119,6 @@ export class AuthController {
     return 'Admin Dashboard';
   }
 
-  // @UseGuards(AuthGuard)
-  // @Public()
   @Get('profile')
   getProfile(@Req() req) {
     return req.user;

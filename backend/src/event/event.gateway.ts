@@ -13,7 +13,10 @@ import { JwtService } from '@nestjs/jwt';
 import { SocketAuthMiddleware } from 'src/common/middlewares/ws.middleware';
 import { Room } from './dto/room.dto';
 
-@WebSocketGateway({ namespace: 'rooms' })
+@WebSocketGateway({
+  namespace: 'rooms',
+  cors: process.env.CLIENT_URI,
+})
 @UseGuards(WsJwtGuard)
 export class EventGateway {
   @WebSocketServer() server: Server;
@@ -29,6 +32,7 @@ export class EventGateway {
 
   @SubscribeMessage('joinRoom')
   joinRoom(@MessageBody() body: any, @ConnectedSocket() client: Socket) {
+    console.log('here', body);
     let spaceAvailable = false;
     let roomId = null;
 

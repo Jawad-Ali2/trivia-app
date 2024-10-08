@@ -36,17 +36,22 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: jwtConstants.secret,
       });
-      console.log(token)
       request['user'] = payload;
-    } catch(err) {
-      console.log(err)
-      throw new UnauthorizedException();
+    } catch (err) {
+      throw new UnauthorizedException('Invalid or expired Jwt token.');
     }
     return true;
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    let cookieHeader: string;
+    if (request.cookies['at']) cookieHeader = 'Bearer ' + request.cookies['at'];
+
+    const [type, token] =
+      request.headers.authorization?.split(' ') ||
+      cookieHeader?.split(' ') ||
+      [];
+
     return type === 'Bearer' ? token : undefined;
   }
 }

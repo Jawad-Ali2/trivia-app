@@ -34,12 +34,13 @@ export class User {
     this.password = await bcrypt.hash(this.password, 10);
   }
 
-  @BeforeUpdate()
-  async updatePassword() {
-    if (this.password) {
-      this.password = await bcrypt.hash(this.password, 10);
-    }
-  }
+  // @BeforeUpdate()
+  // async updatePassword() {
+  //   console.log("hello");
+  //   if (this.password && this.isPasswordModified) {
+  //     this.password = await bcrypt.hash(this.password, 10);
+  //   }
+  // }
 
   async isMatch(enteredPassword: string): Promise<boolean> {
     if (enteredPassword) {
