@@ -27,14 +27,18 @@ axiosInstance.interceptors.response.use(
       refreshingTokenInProgress = true;
 
       const response = await axiosInstance.post("/auth/refresh-token");
+      console.log("in axios");
 
-      if (response.status !== 200) {
+      if (response.status === 200) {
         const data = response.data;
 
-        localStorage.setItem("accessToken", data.accessToken)
+        localStorage.setItem("accessToken", data.accessToken);
+      } else {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
         if (window.location.href !== "/login") window.location.href = "/login";
-        return axios(error.config);
       }
+      return axios(error.config);
     }
 
     return Promise.reject(error);

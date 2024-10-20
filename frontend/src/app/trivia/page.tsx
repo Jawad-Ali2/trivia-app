@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { socket } from "../server";
 import { useTrivia } from "@/store/TriviaProvider";
 import { useAuth } from "@/store/AuthProvider";
+import axiosInstance from "@/lib/axios";
 
 const TriviaInterface = () => {
   // Dummy data for players in the leaderboard
@@ -37,6 +38,7 @@ const TriviaInterface = () => {
     roomId,
     setRoomId,
     playersCount,
+    setPlayersCount,
     trivia,
     setTrivia,
   } = store();
@@ -44,16 +46,20 @@ const TriviaInterface = () => {
   useEffect(() => {
     if (socket.connected) {
       onConnect();
+      // API Call Here For Joining
     }
+
+    socket.emit("joinRoom", {playerId: 1});
 
     // Whenever the user loads the page they'll see different states of game loading
     socket.on("roomJoined", (roomId) => {
+      console.log(" Joined the game");
       setRoomId(roomId);
       // Add more params here
       setTrivia({
         players: [
           {
-            playerId: user.sub,
+            playerId: user.userId,
             username: user.username,
             score: "0",
             correctAnswers: 0,
@@ -66,9 +72,14 @@ const TriviaInterface = () => {
       });
     });
 
+    // socket.on("joinRoom", (data) => {
+    //   console.log(data);
+    // });
+
     // ! Waiting For Player (1/4)
     socket.on("playerJoined", (playerId) => {
       console.log(playerId + " Joined the game");
+      // setPlayersCount(playersCount + 1);
 
       setTrivia({
         players: [
@@ -90,6 +101,7 @@ const TriviaInterface = () => {
     // ! Start
     socket.on("startGame", () => {
       setState("In Progress");
+      console.log("start game");
     });
 
     socket.on("connect", onConnect);
@@ -98,22 +110,30 @@ const TriviaInterface = () => {
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("playerJoined");
+      socket.off("roomJoined");
+      socket.off("joinRoom");
+
+      onDisconnect();
     };
   }, []);
+
+  console.log(trivia.players, playersCount);
 
   function onConnect() {
     console.log("here");
     setSocketConnection(true);
-
+    
     setTransport(socket.io.engine.transport.name);
 
     socket.io.engine.on("upgrade", (transport) => {
       setTransport(transport.name);
     });
-    socket.emit("joinRoom", { playerId: 1 });
   }
 
   function onDisconnect() {
+    console.log(socket);
+    console.log("here disconnecting");
     setSocketConnection(false);
     setTransport("N/A");
   }
@@ -126,11 +146,16 @@ const TriviaInterface = () => {
     }
   };
 
+  const handleClickOnButton = () =>{
+  socket.emit('joinRoom', {playerId: 1});
+  }
+
   return (
     // TODO: Separate components in future
     <div className="flex justify-between bg-background p-6 h-screen bg-gradient-to-r from-primary to-secondary">
       <h2>Status: {socketConnection ? "connected" : "disconnected"}</h2>
       <h3>Transport : {transport}</h3>
+      <Button onClick={handleClickOnButton}>Click me!</Button>
       {loadingGame ? (
         <h1 className="m-auto text-2xl font-bold text-white">
           {state === "Waiting" ? (

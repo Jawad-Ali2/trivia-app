@@ -6,11 +6,11 @@ import { Trivia } from "@/lib/types";
 
 const createStore = () =>
   create<{
-    state: String;
+    state: string;
     setState: (newState: string) => void;
-    playersCount: Number;
+    playersCount: number;
     setPlayersCount: (count: number) => void;
-    roomId: String;
+    roomId: string;
     setRoomId: (newRoomId: string) => void;
     trivia: Trivia;
     setTrivia: (trivia: Trivia) => void;

@@ -25,6 +25,7 @@ export default function Navbar() {
           const data = response.data;
           console.log(data);
           setIsAuthenticated(true);
+          setUser(data.user);
           setAccessToken(localStorage.getItem("accessToken") || "");
         } else {
           setIsAuthenticated(false);
@@ -32,6 +33,8 @@ export default function Navbar() {
           setUser({});
         }
       } catch (error) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
         console.error(error);
       }
     }

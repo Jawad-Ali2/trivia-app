@@ -1,14 +1,5 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  UseGuards,
-  Res,
-  Req,
-} from '@nestjs/common';
+import { Controller, Post, Body, Get, Res, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthGuard } from './guards/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/constants';
@@ -48,7 +39,10 @@ export class AuthController {
     @Body('password') password: string,
     @Res() res: Response,
   ) {
-    const tokens = await this.authService.signIn(username, password);
+    const { tokens, modifiedUser } = await this.authService.signIn(
+      username,
+      password,
+    );
 
     res.cookie('at', tokens.accessToken, {
       httpOnly: true,
@@ -62,6 +56,7 @@ export class AuthController {
     });
 
     return res.status(200).json({
+      user: modifiedUser,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     });
@@ -104,13 +99,11 @@ export class AuthController {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     });
 
-    return res
-      .status(200)
-      .json({
-        message: 'Tokens set in cookies',
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      });
+    return res.status(200).json({
+      message: 'Tokens set in cookies',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    });
   }
 
   @Get('admin')

@@ -41,6 +41,7 @@ export class AuthService {
         user.id,
         user.username,
         user.email,
+        user.role,
       );
       return tokens;
     } catch (err) {
@@ -65,13 +66,21 @@ export class AuthService {
       user.id,
       user.username,
       user.email,
+      user.role,
     );
 
     user.refreshToken = tokens.refreshToken;
 
     await this.userRepository.save(user);
 
-    return tokens;
+    const modifiedUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    };
+
+    return { tokens, modifiedUser };
   }
 
   async guestSignIn() {
@@ -95,7 +104,6 @@ export class AuthService {
 
     if (!user) throw new NotFoundException('User not found or invalid token');
 
-    console.log(refreshToken, '&&&&&', user);
     if (refreshToken !== user.refreshToken)
       throw new UnauthorizedException('Invalid refresh token');
 
@@ -103,6 +111,7 @@ export class AuthService {
       user.id,
       user.username,
       user.email,
+      user.role,
     );
 
     user.refreshToken = tokens.refreshToken;
@@ -116,11 +125,13 @@ export class AuthService {
     userId: number,
     username: string,
     email: string,
+    role: string,
   ): Promise<Tokens> {
     const payload = {
       sub: userId,
       username,
       email,
+      role,
     };
 
     const [accessToken, refreshToken]: [string, string] = await Promise.all([

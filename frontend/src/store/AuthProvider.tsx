@@ -1,5 +1,6 @@
-'use client'
+"use client";
 
+import { User } from "@/lib/types";
 import { createContext, useContext, useState } from "react";
 import { create } from "zustand";
 
@@ -9,7 +10,7 @@ const createStore = () =>
     setIsAuthenticated: (value: boolean) => void;
     accessToken: string;
     setAccessToken: (value: string) => void;
-    user: any;
+    user: User;
     setUser: (value: any) => void;
   }>((set) => ({
     isAuthenticated: false,
@@ -20,7 +21,12 @@ const createStore = () =>
     setAccessToken: (value) => {
       set({ accessToken: value });
     },
-    user: {},
+    user: {
+      userId: NaN,
+      username: "",
+      email: "",
+      role: "",
+    },
     setUser: (value) => {
       set({ user: value });
     },
@@ -41,6 +47,5 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return <AuthContext.Provider value={store}>{children}</AuthContext.Provider>;
 };
-
 
 export default AuthProvider;

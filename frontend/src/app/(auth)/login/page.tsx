@@ -51,6 +51,7 @@ export default function Login({ isOpen, onClose }) {
       if (response.status === 200) {
         const data = response.data;
         console.log("Logged in successfully", data);
+        setUser(data.user);
         setAccessToken(data.accessToken);
         setIsAuthenticated(true);
         localStorage.setItem("accessToken", data.accessToken);
