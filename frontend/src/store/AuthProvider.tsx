@@ -33,7 +33,6 @@ const createStore = () =>
       role: "",
     },
     setUser: (value) => {
-      console.log(value);
       set({ user: value });
     },
   }));

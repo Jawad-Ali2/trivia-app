@@ -104,7 +104,7 @@ export default function Navbar() {
             <div className="hidden sm:ml-6 sm:block ">
               <div className="flex space-x-4">
                 <Link
-                  href="#"
+                  href="/trivia"
                   className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-all"
                 >
                   Quick

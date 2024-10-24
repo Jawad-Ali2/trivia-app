@@ -3,7 +3,11 @@ export type Player = {
   username: string;
   email: string;
   role: string;
-  status: string; // Tells if the user is playing or has left
+  status: 'playing' | 'left';
+  score: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+  position: number;
 };
 
 export type TriviaQuestions = {
@@ -28,4 +32,21 @@ export enum RoomStates {
   WAITING = 'Waiting',
   IN_PROGRESS = 'In Progress',
   FINISHED = 'Finished',
+}
+
+export type Trivia = {
+  players: Player[];
+  question: string;
+  correctAnswer: string;
+  options: string[];
+  round: number;
+};
+
+export interface ScoreUpdateDTO {
+  userId: string;
+  trivia: Trivia;
+  roomId: string;
+  isCorrect: boolean;
+  timeTaken: number;
+  totalTime: number;
 }

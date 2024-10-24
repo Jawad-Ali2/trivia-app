@@ -31,8 +31,10 @@ const createStore = () =>
     },
     trivia: {
       players: [],
+      question: "",
       correctAnswer: "",
-      round: "",
+      options: [],
+      round: 0,
     },
     setTrivia: (newTrivia: any) => {
       set({ trivia: newTrivia });

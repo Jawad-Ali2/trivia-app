@@ -11,8 +11,9 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { WsJwtGuard } from 'src/auth/guards/ws.guard';
 import { JwtService } from '@nestjs/jwt';
 import { SocketAuthMiddleware } from 'src/common/middlewares/ws.middleware';
-import { Player, Room, RoomStates } from './dto/room.dto';
+import { Player, Room, RoomStates, ScoreUpdateDTO } from './dto/room.dto';
 import { Throttle } from '@nestjs/throttler';
+import { calculateScore } from 'src/common/utils';
 
 @Throttle({ default: { limit: 3, ttl: 1000 } })
 @WebSocketGateway({
@@ -86,7 +87,7 @@ export class EventGateway {
       // // ! Efficient
       // const availableRoom = Array.from(this.rooms.values()).find(room => room.players < room.maxPlayers);
       const roomSize = 2; // ! Hard coded change later
-      player.status = 'active';
+      player.status = 'playing';
       if (spaceAvailable && roomId)
         await this.eventService.joinRoom(
           client,
@@ -106,6 +107,46 @@ export class EventGateway {
 
     return { event: 'respone', data: 'Request Completed' };
     //  console.log(this.rooms);
+  }
+
+  @SubscribeMessage('submitAnswer')
+  submitAnswer(
+    @MessageBody() body: ScoreUpdateDTO,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const { userId, trivia, roomId, isCorrect, timeTaken, totalTime } = body;
+
+    const room = this.rooms.get(roomId);
+
+    const score = calculateScore(isCorrect, totalTime - timeTaken);
+
+    room.players.forEach((player) => {
+      if (player.userId === userId) {
+        player.score += score;
+
+        if (isCorrect) {
+          player.correctAnswers++;
+        } else {
+          player.wrongAnswers++;
+        }
+      }
+    });
+
+    room.players.sort((a, b) => b.score - a.score);
+
+    room.players.forEach((player, index) => {
+      player.position = index + 1;
+    });
+
+    this.rooms.set(roomId, room);
+
+    // console.log(room.players);
+    client.emit('scoreUpdate', { players: room.players, room: trivia });
+    client.in(roomId).emit('scoreUpdate', { players: room.players, room: trivia });
+    return {
+      event: 'Update score',
+      data: `${userId}'s score has been updated`,
+    };
   }
 
   @SubscribeMessage('startGame')
