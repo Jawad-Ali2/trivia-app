@@ -10,9 +10,17 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { GameModule } from './game/game.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 6000,
+        limit: 10,
+      },
+    ]),
     ConfigModule.forRoot(),
     DatabaseModule,
     UserModule,
@@ -32,6 +40,10 @@ import { GameModule } from './game/game.module';
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    }
   ],
 })
 export class AppModule {}

@@ -1,7 +1,7 @@
 import { Role } from 'src/constants';
 
 export class UserDto {
-  id: number;
+  id: string;
   username: string;
   email: string;
   password: string;

@@ -74,7 +74,7 @@ export class AuthService {
     await this.userRepository.save(user);
 
     const modifiedUser = {
-      id: user.id,
+      userId: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -122,7 +122,7 @@ export class AuthService {
   }
 
   async generateTokens(
-    userId: number,
+    userId: string,
     username: string,
     email: string,
     role: string,

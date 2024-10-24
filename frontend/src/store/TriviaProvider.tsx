@@ -14,6 +14,8 @@ const createStore = () =>
     setRoomId: (newRoomId: string) => void;
     trivia: Trivia;
     setTrivia: (trivia: Trivia) => void;
+    roomSize: number;
+    setRoomSize: (size: number) => void;
   }>((set) => ({
     state: "Waiting",
     setState: (newState: string) => {
@@ -34,6 +36,10 @@ const createStore = () =>
     },
     setTrivia: (newTrivia: any) => {
       set({ trivia: newTrivia });
+    },
+    roomSize: 0,
+    setRoomSize: (size: number) => {
+      set({ roomSize: size });
     },
   }));
 

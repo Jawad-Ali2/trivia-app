@@ -11,7 +11,7 @@ export class GameController {
   @Get('joinRoom')
   joinRoom() {
 
-    this.eventGateway.emitToClients('joinRoom', {id: 1});
+    // this.eventGateway.emitToClients('joinRoom', {id: 1});
     console.log('JOINED ROOM');
   }
 }

@@ -10,7 +10,7 @@ import { useAuth } from "@/store/AuthProvider";
 
 export default function Navbar() {
   const store = useAuth();
-  const { isAuthenticated, setIsAuthenticated, setAccessToken, setUser } =
+  const { isAuthenticated, setIsAuthenticated, setAccessToken, setUser, user } =
     store();
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const [showMenu, setShowMenu] = useState<boolean>(false);
@@ -25,12 +25,18 @@ export default function Navbar() {
           const data = response.data;
           console.log(data);
           setIsAuthenticated(true);
-          setUser(data.user);
+          setUser(data);
           setAccessToken(localStorage.getItem("accessToken") || "");
+          if (!localStorage.getItem("user")) localStorage.setItem("user", JSON.stringify(data));
         } else {
           setIsAuthenticated(false);
           setAccessToken("");
-          setUser({});
+          setUser({
+            userId: NaN,
+            username: "",
+            email: "",
+            role: "",
+          });
         }
       } catch (error) {
         localStorage.removeItem("accessToken");

@@ -24,11 +24,11 @@ export class UserService {
     return this.userRepository.find();
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return this.userRepository.findOneBy({ id });
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.userRepository.findOneBy({ id });
 
     console.log(updateUserDto)
@@ -39,7 +39,7 @@ export class UserService {
     return `This action updates a #${id} user`;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
 
     const user = await this.userRepository.findOneBy({id});
 

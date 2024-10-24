@@ -11,7 +11,12 @@ const createStore = () =>
     accessToken: string;
     setAccessToken: (value: string) => void;
     user: User;
-    setUser: (value: any) => void;
+    setUser: (value: {
+      userId: number;
+      username: string;
+      email: string;
+      role: string;
+    }) => void;
   }>((set) => ({
     isAuthenticated: false,
     setIsAuthenticated: (value) => {
@@ -28,6 +33,7 @@ const createStore = () =>
       role: "",
     },
     setUser: (value) => {
+      console.log(value);
       set({ user: value });
     },
   }));

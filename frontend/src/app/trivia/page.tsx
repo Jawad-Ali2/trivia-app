@@ -1,26 +1,21 @@
 "use client";
 // components/TriviaInterface.tsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { socket } from "../server";
 import { useTrivia } from "@/store/TriviaProvider";
 import { useAuth } from "@/store/AuthProvider";
 import axiosInstance from "@/lib/axios";
+// import { useSocket } from "@/store/SocketProvider";
 
 const TriviaInterface = () => {
   // Dummy data for players in the leaderboard
   const [loadingGame, setLoadingGame] = useState(true); // Whenever the user opens this page they'll see waiting states
-  const [socketConnection, setSocketConnection] = useState(false);
-  const [transport, setTransport] = useState("N/A");
-  const [players, setPlayers] = useState([
-    { name: "Player 1", score: 100 },
-    { name: "Player 2", score: 80 },
-    { name: "Player 3", score: 60 },
-    { name: "Player 4", score: 50 },
-  ]);
 
   // Question and options (for demonstration purposes)
+  const [socketConnection, setSocketConnection] = useState(false);
+  const [transport, setTransport] = useState("N/A");
   const [question, setQuestion] = useState({
     text: "Which planet is known as the Red Planet?",
     options: ["Earth", "Mars", "Jupiter", "Saturn"],
@@ -29,9 +24,7 @@ const TriviaInterface = () => {
   // Selected answer state
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [playerScore, setPlayerScore] = useState(100); // Player's score
-  const authStore = useAuth();
-  const { user } = authStore();
-  const store = useTrivia();
+  const triviaStore = useTrivia();
   const {
     state,
     setState,
@@ -41,67 +34,67 @@ const TriviaInterface = () => {
     setPlayersCount,
     trivia,
     setTrivia,
-  } = store();
+    roomSize,
+    setRoomSize,
+  } = triviaStore();
 
   useEffect(() => {
     if (socket.connected) {
       onConnect();
-      // API Call Here For Joining
     }
 
-    socket.emit("joinRoom", {playerId: 1});
+    // Once the component loads we request to join room
+    socket.emit("joinRoom", {
+      // TODO: Fix this later
+      player: JSON.parse(localStorage.getItem("user") ?? ""),
+    });
 
     // Whenever the user loads the page they'll see different states of game loading
-    socket.on("roomJoined", (roomId) => {
+    socket.on("roomJoined", ({ roomId, players, roomSize }) => {
       console.log(" Joined the game");
+
+      const updatedPlayers = players.map((player: any) => ({
+        playerId: player.userId,
+        username: player.username,
+        score: "0",
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        position: "0",
+      }));
+
+      // const userDetails = JSON.parse(localStorage.getItem("user") ?? "");
       setRoomId(roomId);
+      setRoomSize(roomSize);
       // Add more params here
       setTrivia({
-        players: [
-          {
-            playerId: user.userId,
-            username: user.username,
-            score: "0",
-            correctAnswers: 0,
-            wrongAnswers: 0,
-            position: "0",
-          },
-        ],
+        players: updatedPlayers,
         correctAnswer: "0",
         round: "0",
       });
     });
 
-    // socket.on("joinRoom", (data) => {
-    //   console.log(data);
-    // });
-
     // ! Waiting For Player (1/4)
-    socket.on("playerJoined", (playerId) => {
-      console.log(playerId + " Joined the game");
-      // setPlayersCount(playersCount + 1);
+    socket.on("playerJoined", (players) => {
+      console.log(" player Joined the game");
 
+      setPlayersCount(players.players.length);
       setTrivia({
-        players: [
-          ...trivia.players,
-          {
-            playerId: playerId,
-            username: "abc",
-            position: "3",
-            correctAnswers: 2,
-            score: "10",
-            wrongAnswers: 0,
-          },
-        ],
+        players: players.players,
         correctAnswer: "0",
         round: "0",
       });
     });
     // ! Preparing the room
     // ! Start
-    socket.on("startGame", () => {
+    socket.on("startGame", ({ roomId, players, question }) => {
+      console.log("START GAME");
+      setRoomId(roomId);
+      setTrivia({
+        players: players,
+        correctAnswer: "0",
+        round: "0",
+      });
       setState("In Progress");
-      console.log("start game");
     });
 
     socket.on("connect", onConnect);
@@ -112,18 +105,24 @@ const TriviaInterface = () => {
       socket.off("disconnect", onDisconnect);
       socket.off("playerJoined");
       socket.off("roomJoined");
-      socket.off("joinRoom");
+      // socket.off("joinRoom");
+      socket.off("startGame");
+      // if (roomId && roomSize > 0) {
+      //   // That means the user is currently in queue
+      //   socket.emit("leaveRoom", {
+      //     roomId,
+      //     roomSize,
+      //     user: localStorage.getItem("user"),
+      //   });
+      // }
 
       onDisconnect();
     };
-  }, []);
-
-  console.log(trivia.players, playersCount);
+  }, [socket]);
 
   function onConnect() {
-    console.log("here");
     setSocketConnection(true);
-    
+
     setTransport(socket.io.engine.transport.name);
 
     socket.io.engine.on("upgrade", (transport) => {
@@ -132,11 +131,28 @@ const TriviaInterface = () => {
   }
 
   function onDisconnect() {
-    console.log(socket);
-    console.log("here disconnecting");
+    console.log("Disconenct");
     setSocketConnection(false);
     setTransport("N/A");
   }
+
+  const handleBeforeUnload = (event: Event) => {
+    console.log(roomId);
+    console.log("Leaving the page", roomId, roomSize);
+    // Emit a custom event to notify the backend
+    if (roomId && roomSize > 0) {
+      // That means the user is currently in queue
+      socket.emit("leaveRoom", {
+        roomId,
+        roomSize,
+        user: localStorage.getItem("user"),
+      });
+    }
+
+    event.preventDefault();
+    // Optional: show a confirmation message
+    // event.returnValue = '';  // For most browsers
+  };
 
   // Handle selecting an answer
   const handleAnswerClick = (option: string) => {
@@ -146,9 +162,11 @@ const TriviaInterface = () => {
     }
   };
 
-  const handleClickOnButton = () =>{
-  socket.emit('joinRoom', {playerId: 1});
-  }
+  const handleClickOnButton = () => {
+    socket.emit("joinRoom", { playerId: 1 });
+  };
+
+  console.log(socket?.connected);
 
   return (
     // TODO: Separate components in future
@@ -159,9 +177,33 @@ const TriviaInterface = () => {
       {loadingGame ? (
         <h1 className="m-auto text-2xl font-bold text-white">
           {state === "Waiting" ? (
-            <>Waiting for players {trivia.players.length} / 2</>
+            <div>
+              {/* <div>{trivia.players}</div> */}
+              <div className="flex text-sm">
+                <span>users in queue:</span>
+                {Array.isArray(trivia.players) &&
+                  trivia.players?.map((player) => (
+                    <div key={player.playerId}>
+                      <span className="p-1">{player?.username}</span>
+                    </div>
+                  ))}
+              </div>
+              <div>Waiting for players {trivia.players.length} / 3</div>
+            </div>
           ) : (
-            state === "Preparing" && <>Preparing the room</>
+            state === "In Progress" && (
+              <>
+                <div>Preparing the room</div>
+                <div>
+                  {trivia.players.map((player) => (
+                    <>
+                      <div key={player.playerId}>{player.username}</div>
+                      <br />
+                    </>
+                  ))}
+                </div>
+              </>
+            )
           )}
         </h1>
       ) : (
@@ -225,7 +267,7 @@ const TriviaInterface = () => {
               Leaderboard
             </h2>
             <ul className="space-y-2">
-              {players.map((player, index) => (
+              {/* {players.map((player, index) => (
                 <li
                   key={index}
                   className="bg-secondary-foreground rounded-md p-2 flex justify-between items-center"
@@ -235,7 +277,7 @@ const TriviaInterface = () => {
                     {player.score}
                   </span>
                 </li>
-              ))}
+              ))} */}
             </ul>
           </div>
         </>

@@ -5,7 +5,9 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/constants';
 import { Tokens } from './types/auth.types';
 import { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 
+// @Throttle({})
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

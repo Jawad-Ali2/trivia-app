@@ -55,6 +55,7 @@ export default function Login({ isOpen, onClose }) {
         setAccessToken(data.accessToken);
         setIsAuthenticated(true);
         localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("user", JSON.stringify(data.user));
         onClose(); // Close modal on successful login
       }
     } catch (error) {
