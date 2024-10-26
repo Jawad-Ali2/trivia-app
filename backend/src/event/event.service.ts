@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Player, Room, RoomStates } from './dto/room.dto';
 import { Socket } from 'socket.io';
 import axios from 'axios';
+import { getShuffledOptions } from 'src/common/utils';
 
 @Injectable()
 export class EventService {
@@ -34,7 +35,7 @@ export class EventService {
     client.join(roomId);
 
     // TODO: Make constant of each room event seperately
-    console.log(rooms.get(roomId).players)
+    console.log(rooms.get(roomId).players);
     client.emit('roomJoined', {
       roomId,
       players: rooms.get(roomId).players,
@@ -66,15 +67,6 @@ export class EventService {
               incorrect_answers: ['False'],
             },
             {
-              type: 'boolean',
-              difficulty: 'medium',
-              category: 'History',
-              question:
-                'Adolf Hitler was accepted into the Vienna Academy of Fine Arts.',
-              correct_answer: 'False',
-              incorrect_answers: ['True'],
-            },
-            {
               type: 'multiple',
               difficulty: 'hard',
               category: 'General Knowledge',
@@ -86,6 +78,15 @@ export class EventService {
                 'The Simoleon Family',
                 'The Proud Family',
               ],
+            },
+            {
+              type: 'boolean',
+              difficulty: 'medium',
+              category: 'History',
+              question:
+                'Adolf Hitler was accepted into the Vienna Academy of Fine Arts.',
+              correct_answer: 'False',
+              incorrect_answers: ['True'],
             },
             {
               type: 'multiple',
@@ -167,11 +168,10 @@ export class EventService {
           rooms.get(roomId).players.map((u) => u.username),
         );
 
-        const options = [];
-        data.results[0].incorrect_answers.forEach((incorrectAnswer : string) => {
-          options.push(incorrectAnswer);
-        });
-        options.push(data.results[0].correct_answer);
+        const options = getShuffledOptions(
+          data.results[0].incorrect_answers,
+          data.results[0].correct_answer,
+        );
 
         client.emit('startGame', {
           roomId: roomId,
@@ -256,6 +256,7 @@ export class EventService {
       players: [player],
       sockets: [client.id],
       questions: [],
+      playerAnswers: [],
       maxPlayers: roomSize,
       state: RoomStates.WAITING,
       round: 0,

@@ -13,7 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import { SocketAuthMiddleware } from 'src/common/middlewares/ws.middleware';
 import { Player, Room, RoomStates, ScoreUpdateDTO } from './dto/room.dto';
 import { Throttle } from '@nestjs/throttler';
-import { calculateScore } from 'src/common/utils';
+import { calculateScore, getShuffledOptions } from 'src/common/utils';
 
 @Throttle({ default: { limit: 3, ttl: 1000 } })
 @WebSocketGateway({
@@ -114,14 +114,29 @@ export class EventGateway {
     @MessageBody() body: ScoreUpdateDTO,
     @ConnectedSocket() client: Socket,
   ) {
-    const { userId, trivia, roomId, isCorrect, timeTaken, totalTime } = body;
-
+    const {
+      userId,
+      trivia,
+      roomId,
+      optionSelected,
+      isCorrect,
+      timeTaken,
+      totalTime,
+    } = body;
+    let playersAnsweredCount = 0;
     const room = this.rooms.get(roomId);
 
     const score = calculateScore(isCorrect, totalTime - timeTaken);
 
     room.players.forEach((player) => {
       if (player.userId === userId) {
+        room.playerAnswers.push({
+          userId: player.userId,
+          answer: optionSelected,
+          isCorrect: isCorrect,
+          round: room.round,
+        });
+        player.answered = true;
         player.score += score;
 
         if (isCorrect) {
@@ -130,6 +145,8 @@ export class EventGateway {
           player.wrongAnswers++;
         }
       }
+
+      if (player.answered) playersAnsweredCount++;
     });
 
     room.players.sort((a, b) => b.score - a.score);
@@ -138,11 +155,60 @@ export class EventGateway {
       player.position = index + 1;
     });
 
+    if (room.maxPlayers === playersAnsweredCount) {
+      // Stop every player's countdown and let them know next round is starting
+      client.emit('roundFinished', {
+        roundFinished: true,
+      });
+      client.in(roomId).emit('roundFinished', {
+        roundFinished: true,
+      });
+
+      // current round has finished
+      // if(room.round ) // TODO: If the rounds equal to lobby rounds limit we finish the game
+
+      room.round++;
+      room.players.forEach((player) => {
+        player.answered = false;
+      });
+
+      const options = getShuffledOptions(
+        room.questions[room.round].incorrect_answers,
+        room.questions[room.round].correct_answer,
+      );
+
+      // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
+      trivia.correctAnswer = room.questions[room.round].correct_answer;
+      trivia.options = options;
+      trivia.players = room.players;
+      trivia.question = room.questions[room.round].question;
+      trivia.round = room.round;
+
+      // Emit next round announcement here
+      client.emit('nextRound', {
+        roomId: roomId,
+        players: room.players,
+        question: room.questions[room.round],
+        options,
+        round: room.round,
+      });
+      client.in(roomId).emit('nextRound', {
+        roomId: roomId,
+        players: room.players,
+        question: room.questions[room.round],
+        options,
+        round: room.round,
+      });
+    }
+
     this.rooms.set(roomId, room);
 
     // console.log(room.players);
     client.emit('scoreUpdate', { players: room.players, room: trivia });
-    client.in(roomId).emit('scoreUpdate', { players: room.players, room: trivia });
+    client
+      .in(roomId)
+      .emit('scoreUpdate', { players: room.players, room: trivia });
+
     return {
       event: 'Update score',
       data: `${userId}'s score has been updated`,

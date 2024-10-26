@@ -40,6 +40,8 @@ const TriviaInterface = () => {
     setTrivia,
     roomSize,
     setRoomSize,
+    roundEnded,
+    setRoundEnded
   } = triviaStore();
 
   useEffect(() => {
@@ -57,6 +59,7 @@ const TriviaInterface = () => {
         correctAnswers: 0,
         wrongAnswers: 0,
         position: 0,
+        answered: false,
       };
 
       socket.emit("joinRoom", {
@@ -110,13 +113,31 @@ const TriviaInterface = () => {
     });
 
     socket.on("scoreUpdate", ({ players, room }) => {
-      console.log(room);
-
       setTrivia({
         ...room,
         players: players,
       });
     }); // Update score
+
+    socket.on("nextRound", ({ roomId, players, question, options, round }) => {
+      console.log("Next round");
+      setTrivia({
+        players: players,
+        question: question.question,
+        correctAnswer: question.correct_answer,
+        // wrongAnswers: question.incorrect_answers,
+        options: options,
+        round: round,
+      });
+      setRoundEnded(false);
+    });
+
+    socket.on(
+      "roundFinished",
+      ({ roundFinished }: { roundFinished: boolean }) => {
+        setRoundEnded(roundFinished);
+      }
+    );
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -130,6 +151,8 @@ const TriviaInterface = () => {
         // socket.off("joinRoom");
         socket.off("startGame");
         socket.off("scoreUpdate");
+        socket.off("nextRound");
+        socket.off("roundFinished");
         onDisconnect();
       }
     };
@@ -212,7 +235,7 @@ const TriviaInterface = () => {
           )}
         </h1>
       ) : (
-        <TriviaQuestion user={user} trivia={trivia} roomId={roomId} />
+        <TriviaQuestion user={user} trivia={trivia} roomId={roomId} roundFinished={roundEnded}/>
       )}
     </div>
   );

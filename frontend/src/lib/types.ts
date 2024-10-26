@@ -25,6 +25,7 @@ export type Player = {
   correctAnswers: number;
   wrongAnswers: number;
   position: number;
+  answered: boolean; // To keep track if everyone has answered
 };
 
 export type User = {
@@ -34,12 +35,12 @@ export type User = {
   role: string;
 };
 
-
 export interface ScoreUpdateDTO {
   userId: string;
   // question: string;
   trivia: Trivia;
   roomId: string;
+  optionSelected: string;
   isCorrect: boolean;
   timeTaken: number;
   totalTime: number;

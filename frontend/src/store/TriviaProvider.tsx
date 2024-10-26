@@ -16,6 +16,8 @@ const createStore = () =>
     setTrivia: (trivia: Trivia) => void;
     roomSize: number;
     setRoomSize: (size: number) => void;
+    roundEnded: boolean;
+    setRoundEnded: (input: boolean) => void;
   }>((set) => ({
     state: "Waiting",
     setState: (newState: string) => {
@@ -43,6 +45,10 @@ const createStore = () =>
     setRoomSize: (size: number) => {
       set({ roomSize: size });
     },
+    roundEnded: false,
+    setRoundEnded: (input: boolean) => {
+      set({roundEnded: input});
+    }
   }));
 
 const TriviaContext = createContext<ReturnType<typeof createStore> | null>(

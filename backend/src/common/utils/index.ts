@@ -14,3 +14,20 @@ export function calculateScore(isCorrect: boolean, timeTaken: number) {
 
     return baseScore + timeBonus;
 }
+
+export function getShuffledOptions(incorrect_answers: string[], correct_answer: string){
+    const options = [];
+    console.log(incorrect_answers);
+
+    incorrect_answers.forEach((incorrectAnswer : string) => {
+        options.push(incorrectAnswer);
+      });
+      options.push(correct_answer);
+
+      const shuffledOptions = options
+      .map(value => ({value, sort: Math.random()}))
+      .sort((a,b) => a.sort - b.sort)
+      .map(({value}) => value);
+
+      return shuffledOptions;
+}

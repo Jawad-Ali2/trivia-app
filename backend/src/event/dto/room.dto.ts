@@ -8,6 +8,7 @@ export type Player = {
   correctAnswers: number;
   wrongAnswers: number;
   position: number;
+  answered: boolean; // To keep track if everyone has answered
 };
 
 export type TriviaQuestions = {
@@ -15,14 +16,22 @@ export type TriviaQuestions = {
   difficulty: string;
   category: string;
   question: string;
-  correctAnswer: string;
-  incorrectAnswers: string[];
+  correct_answer: string;
+  incorrect_answers: string[];
 };
+
+export type Answer = {
+  userId: string;
+  answer: string;
+  isCorrect: boolean;
+  round: number;
+}
 
 export type Room = {
   players: Player[];
   sockets: string[];
   questions: TriviaQuestions[];
+  playerAnswers: Answer[];
   state: string;
   maxPlayers: number;
   round: number;
@@ -44,8 +53,10 @@ export type Trivia = {
 
 export interface ScoreUpdateDTO {
   userId: string;
+  // question: string;
   trivia: Trivia;
   roomId: string;
+  optionSelected: string;
   isCorrect: boolean;
   timeTaken: number;
   totalTime: number;
