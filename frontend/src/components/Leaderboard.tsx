@@ -17,9 +17,21 @@ function Leaderboard({ trivia, userId }: LeaderboardProps) {
             className="bg-secondary-foreground rounded-md p-2 flex justify-between items-center"
           >
             {player.userId === userId ? (
-              <span className="text-foreground">You</span>
+              <span
+                className={`text-foreground ${
+                  player.status === "left" && "font-light text-gray-500"
+                }`}
+              >
+                You
+              </span>
             ) : (
-              <span className="text-foreground">{player.username}</span>
+              <span
+                className={`text-foreground ${
+                  player.status === "left" && "font-light text-gray-500"
+                }`}
+              >
+                {player.username}
+              </span>
             )}
             <span className="font-semibold text-foreground">
               {player.score}

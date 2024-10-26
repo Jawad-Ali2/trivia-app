@@ -20,10 +20,6 @@ const TriviaInterface = () => {
   // Question and options (for demonstration purposes)
   const [socketConnection, setSocketConnection] = useState(false);
   const [transport, setTransport] = useState("N/A");
-  const [question, setQuestion] = useState({
-    text: "Which planet is known as the Red Planet?",
-    options: ["Earth", "Mars", "Jupiter", "Saturn"],
-  });
   const authStore = useAuth();
   const { user } = authStore();
 
@@ -41,7 +37,8 @@ const TriviaInterface = () => {
     roomSize,
     setRoomSize,
     roundEnded,
-    setRoundEnded
+    setRoundEnded,
+    leaveRoom,
   } = triviaStore();
 
   useEffect(() => {
@@ -139,6 +136,14 @@ const TriviaInterface = () => {
       }
     );
 
+    socket.on("playerLeft", ({ room, players }) => {
+      console.log("player left", room);
+      setTrivia({
+        ...room,
+        players: players,
+      });
+    });
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
 
@@ -148,11 +153,11 @@ const TriviaInterface = () => {
         socket.off("disconnect", onDisconnect);
         socket.off("playerJoined");
         socket.off("roomJoined");
-        // socket.off("joinRoom");
         socket.off("startGame");
         socket.off("scoreUpdate");
         socket.off("nextRound");
         socket.off("roundFinished");
+        socket.off("playerLeft");
         onDisconnect();
       }
     };
@@ -175,6 +180,19 @@ const TriviaInterface = () => {
       }, 1000);
     }
   }, [state]);
+
+  useEffect(() => {
+    return () => {
+      // if (socket.connected) {
+      //   if (user && roomId) {
+      //     const currentTrivia = trivia;
+      //     console.log("TRYING TO DC", currentTrivia);
+      //     socket.emit("leaveRoom", { roomId, player: user, trivia: currentTrivia });
+      //   }
+      // }
+      leaveRoom(socket, user);
+    };
+  }, [user, roomId]);
 
   function onConnect() {
     setSocketConnection(true);
@@ -235,7 +253,12 @@ const TriviaInterface = () => {
           )}
         </h1>
       ) : (
-        <TriviaQuestion user={user} trivia={trivia} roomId={roomId} roundFinished={roundEnded}/>
+        <TriviaQuestion
+          user={user}
+          trivia={trivia}
+          roomId={roomId}
+          roundFinished={roundEnded}
+        />
       )}
     </div>
   );

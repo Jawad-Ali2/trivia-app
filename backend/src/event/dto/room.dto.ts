@@ -25,7 +25,7 @@ export type Answer = {
   answer: string;
   isCorrect: boolean;
   round: number;
-}
+};
 
 export type Room = {
   players: Player[];

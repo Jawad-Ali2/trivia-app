@@ -18,7 +18,8 @@ const createStore = () =>
     setRoomSize: (size: number) => void;
     roundEnded: boolean;
     setRoundEnded: (input: boolean) => void;
-  }>((set) => ({
+    leaveRoom: (socket: any, user: any) => void;
+  }>((set, get) => ({
     state: "Waiting",
     setState: (newState: string) => {
       set({ state: newState });
@@ -47,8 +48,17 @@ const createStore = () =>
     },
     roundEnded: false,
     setRoundEnded: (input: boolean) => {
-      set({roundEnded: input});
-    }
+      set({ roundEnded: input });
+    },
+
+    leaveRoom: (socket: any, user: any) => {
+      const { trivia, roomId } = get();
+
+      if (socket.connected && roomId && user) {
+        console.log("TRYING TO DC", trivia);
+        socket.emit("leaveRoom", { roomId, player: user, trivia });
+      }
+    },
   }));
 
 const TriviaContext = createContext<ReturnType<typeof createStore> | null>(

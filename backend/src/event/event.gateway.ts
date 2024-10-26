@@ -51,7 +51,6 @@ export class EventGateway {
     @ConnectedSocket() client: Socket,
   ) {
     if (!player) return { error: 'Something went wrong' };
-    // console.log('here', player.userId, player);
     const now = new Date();
     const lastRequestTime = this.userRequests.get(player.userId);
 
@@ -103,8 +102,6 @@ export class EventGateway {
       this.locks.delete(player.userId);
     }
 
-    // console.log('Outside of lobby logic.', this.rooms.);
-
     return { event: 'respone', data: 'Request Completed' };
     //  console.log(this.rooms);
   }
@@ -124,6 +121,7 @@ export class EventGateway {
       totalTime,
     } = body;
     let playersAnsweredCount = 0;
+    let disconnectedPlayer = 0;
     const room = this.rooms.get(roomId);
 
     const score = calculateScore(isCorrect, totalTime - timeTaken);
@@ -146,6 +144,7 @@ export class EventGateway {
         }
       }
 
+      if (player.status === 'left') disconnectedPlayer++;
       if (player.answered) playersAnsweredCount++;
     });
 
@@ -155,7 +154,7 @@ export class EventGateway {
       player.position = index + 1;
     });
 
-    if (room.maxPlayers === playersAnsweredCount) {
+    if (room.maxPlayers === playersAnsweredCount + disconnectedPlayer) {
       // Stop every player's countdown and let them know next round is starting
       client.emit('roundFinished', {
         roundFinished: true,
@@ -222,22 +221,50 @@ export class EventGateway {
 
   @SubscribeMessage('leaveRoom')
   leaveRoom(@MessageBody() body, @ConnectedSocket() client: Socket) {
-    console.log('Leaving room', body.roomId, this.rooms);
-    const room = this.rooms.get(body.roomId);
+    const now = new Date();
+    const lastRequestTime = this.userRequests.get(body.player.userId);
 
-    console.log('Before', room);
+    if (lastRequestTime && now.getTime() - lastRequestTime.getTime() < 1000)
+      return {
+        event: 'duplicate',
+        data: 'Player sent too many requests at the same time',
+      };
+
+    this.userRequests.set(body.player.userId, now);
+
+    const room = this.rooms.get(body.roomId);
 
     if (room?.state === RoomStates.WAITING) {
       room.players = room.players.filter(
-        (player) => player.userId !== body.user.userId,
+        (player) => player.userId !== body.player.userId,
       );
       room.sockets = room.sockets.filter((socket) => socket !== client.id);
+    } else {
+      room.players.forEach((player) => {
+        if (player.userId == body.player.userId) {
+          player.status = 'left';
+        }
+      });
     }
 
-    console.log('After', room);
+    if (room.players.length === 0) this.rooms.delete(body.roomId);
+    else {
+      // console.log("Player left", );
+      // console.log(body.trivia);
+      // players: Player[];
+      // question: string;
+      // correctAnswer: string;
+      // options: string[];
+      // round: number;
+      // body.trivia.question = room.questions[room.round].question;
+      // body.trivia.correctAnswer = room.questions[room.round].correct_answer;
+      client.in(body.roomId).emit('playerLeft', { room: body.trivia, players: room.players });
+      this.rooms.set(body.roomId, room);
+    }
+    // TODO: If the player leaves during waiting state then just filter array
+    // TODO: But if the player leaves during the match just mark as inactive/left
 
-    this.rooms.set(body.roomId, room);
-
-    client.emit('playerLeft', { players: this.rooms.get(body.roomId).players });
+    // Emit to the room that player has left
+    client.leave(body.roomId);
   }
 }

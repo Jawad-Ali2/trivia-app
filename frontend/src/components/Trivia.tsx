@@ -84,7 +84,6 @@ function TriviaQuestion({ user, trivia, roomId, roundFinished }: TriviaProps) {
     }
   };
 
-  console.log(timer);
   return (
     <>
       {/* Trivia Question Section */}
