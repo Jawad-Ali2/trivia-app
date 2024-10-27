@@ -128,12 +128,14 @@ export class EventGateway {
 
     room.players.forEach((player) => {
       if (player.userId === userId) {
+        // TODO: Change this line
         room.playerAnswers.push({
           userId: player.userId,
           answer: optionSelected,
           isCorrect: isCorrect,
           round: room.round,
         });
+
         player.answered = true;
         player.score += score;
 
@@ -142,6 +144,34 @@ export class EventGateway {
         } else {
           player.wrongAnswers++;
         }
+
+        room.gameResult.playersPerformance.forEach((playerPerformance) => {
+          if (playerPerformance.userId === player.userId) {
+            console.log('SAVING THE PROGRESS');
+            playerPerformance.averageTimePerRound =
+              (playerPerformance.averageTimePerRound * room.round +
+                (totalTime - timeTaken)) /
+              (room.round + 1);
+
+            playerPerformance.correctAnswers = player.correctAnswers;
+            playerPerformance.wrongAnswers = player.wrongAnswers;
+            if (room.round === room.maxRounds - 1) {
+              playerPerformance.totalScore = player.score;
+              playerPerformance.finalPosition = player.position;
+
+              playerPerformance.status =
+                player.status === 'playing' ? 'complete' : 'left';
+            }
+            playerPerformance.rounds.push({
+              round: room.round,
+              question: room.questions[room.round].question,
+              selectedAnswer: optionSelected,
+              isCorrect: isCorrect,
+              timeTaken: timeTaken,
+              scoreGained: score,
+            });
+          }
+        });
       }
 
       if (player.status === 'left') disconnectedPlayer++;
@@ -165,39 +195,52 @@ export class EventGateway {
 
       // current round has finished
       // if(room.round ) // TODO: If the rounds equal to lobby rounds limit we finish the game
+      if (room.round === room.maxRounds - 1) {
+        room.gameResult.endTime = new Date();
+        room.gameResult.winningPlayer = room.gameResult.playersPerformance.find(
+          (player) => player.finalPosition === 1,
+        );
 
-      room.round++;
-      room.players.forEach((player) => {
-        player.answered = false;
-      });
+        // TODO: Handle end game logic
+        // TODO: Show user's performance during each question (For this I have to prepare another state that keeps track of user's activity)
+        // Send performance along too
+        client.emit('gameEnded', { results: room.gameResult });
+        client.in(roomId).emit('gameEnded', { results: room.gameResult });
+        console.log('Game ended brother!');
+      } else {
+        room.round++;
+        room.players.forEach((player) => {
+          player.answered = false;
+        });
 
-      const options = getShuffledOptions(
-        room.questions[room.round].incorrect_answers,
-        room.questions[room.round].correct_answer,
-      );
+        const options = getShuffledOptions(
+          room.questions[room.round].incorrect_answers,
+          room.questions[room.round].correct_answer,
+        );
 
-      // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
-      trivia.correctAnswer = room.questions[room.round].correct_answer;
-      trivia.options = options;
-      trivia.players = room.players;
-      trivia.question = room.questions[room.round].question;
-      trivia.round = room.round;
+        // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
+        trivia.correctAnswer = room.questions[room.round].correct_answer;
+        trivia.options = options;
+        trivia.players = room.players;
+        trivia.question = room.questions[room.round].question;
+        trivia.round = room.round;
 
-      // Emit next round announcement here
-      client.emit('nextRound', {
-        roomId: roomId,
-        players: room.players,
-        question: room.questions[room.round],
-        options,
-        round: room.round,
-      });
-      client.in(roomId).emit('nextRound', {
-        roomId: roomId,
-        players: room.players,
-        question: room.questions[room.round],
-        options,
-        round: room.round,
-      });
+        // Emit next round announcement here
+        client.emit('nextRound', {
+          roomId: roomId,
+          players: room.players,
+          question: room.questions[room.round],
+          options,
+          round: room.round,
+        });
+        client.in(roomId).emit('nextRound', {
+          roomId: roomId,
+          players: room.players,
+          question: room.questions[room.round],
+          options,
+          round: room.round,
+        });
+      }
     }
 
     this.rooms.set(roomId, room);
@@ -224,7 +267,7 @@ export class EventGateway {
     const now = new Date();
     const lastRequestTime = this.userRequests.get(body.player.userId);
 
-    console.log("PLAYER REQUESTED TO LEAVE");
+    console.log('PLAYER REQUESTED TO LEAVE');
     if (lastRequestTime && now.getTime() - lastRequestTime.getTime() < 1000)
       return {
         event: 'duplicate',
@@ -250,7 +293,9 @@ export class EventGateway {
 
     if (room.players.length === 0) this.rooms.delete(body.roomId);
     else {
-      client.in(body.roomId).emit('playerLeft', { room: body.trivia, players: room.players });
+      client
+        .in(body.roomId)
+        .emit('playerLeft', { room: body.trivia, players: room.players });
       this.rooms.set(body.roomId, room);
     }
     // TODO: If the player leaves during waiting state then just filter array

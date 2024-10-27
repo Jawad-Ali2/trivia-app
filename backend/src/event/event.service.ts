@@ -16,8 +16,6 @@ export class EventService {
   ) {
     const room = rooms.get(roomId);
 
-    // const playerAlreadyJoined = room.players.includes(player.userId);
-
     const playerAlreadyJoined: boolean = room.players.some(
       (p) => p.userId === player.userId,
     );
@@ -30,12 +28,28 @@ export class EventService {
       ...room,
       players: [...room.players, player],
       sockets: [...room.sockets, client.id],
+      gameResult: {
+        ...room.gameResult,
+        playersPerformance: [
+          ...(room.gameResult?.playersPerformance || []),
+          {
+            userId: player.userId,
+            username: player.username,
+            averageTimePerRound: 0,
+            correctAnswers: 0,
+            wrongAnswers: 0,
+            finalPosition: 0,
+            rounds: [],
+            totalScore: 0,
+          },
+        ],
+      },
     });
 
     client.join(roomId);
 
     // TODO: Make constant of each room event seperately
-    console.log(rooms.get(roomId).players);
+    // console.log(rooms.get(roomId).players);
     client.emit('roomJoined', {
       roomId,
       players: rooms.get(roomId).players,
@@ -247,6 +261,7 @@ export class EventService {
     player: Player,
     // player: any,
     roomSize: number,
+    maxRounds: number = 10,
   ) {
     const roomId: string = crypto.randomUUID();
 
@@ -260,6 +275,24 @@ export class EventService {
       maxPlayers: roomSize,
       state: RoomStates.WAITING,
       round: 0,
+      maxRounds: maxRounds,
+      gameResult: {
+        roomId: roomId,
+        playersPerformance: [
+          {
+            userId: player.userId,
+            username: player.username,
+            averageTimePerRound: 0,
+            correctAnswers: 0,
+            wrongAnswers: 0,
+            finalPosition: 0,
+            rounds: [],
+            totalScore: 0,
+          },
+        ],
+        totalRounds: maxRounds,
+        endTime: null,
+      },
     });
 
     client.emit('roomJoined', {

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 import { create } from "zustand";
-import { Trivia } from "@/lib/types";
+import { GameResult, Trivia } from "@/lib/types";
 
 const createStore = () =>
   create<{
@@ -19,6 +19,8 @@ const createStore = () =>
     roundEnded: boolean;
     setRoundEnded: (input: boolean) => void;
     leaveRoom: (socket: any, user: any) => void;
+    triviaResult: GameResult;
+    setTriviaResult: (results: GameResult) => void;
   }>((set, get) => ({
     state: "Waiting",
     setState: (newState: string) => {
@@ -61,6 +63,26 @@ const createStore = () =>
         set({ playersCount: 0 });
         socket.emit("leaveRoom", { roomId, player: user, trivia });
       }
+    },
+    triviaResult: {
+      roomId: "",
+      playersPerformance: [],
+      totalRounds: 0,
+      winningPlayer: {
+        userId: "",
+        username: "",
+        totalScore: 0,
+        rounds: [],
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        averageTimePerRound: 0,
+        finalPosition: 0,
+        status: "left",
+      },
+      endTime: new Date(),
+    },
+    setTriviaResult: (results) => {
+      set({ triviaResult: results });
     },
   }));
 

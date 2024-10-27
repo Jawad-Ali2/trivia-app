@@ -9,8 +9,9 @@ import { useAuth } from "@/store/AuthProvider";
 import axiosInstance from "@/lib/axios";
 import Trivia from "@/components/Trivia";
 import { setInterval } from "worker-timers";
-import { Player, User } from "@/lib/types";
+import { GameResult, Player, User } from "@/lib/types";
 import TriviaQuestion from "@/components/Trivia";
+import Statistics from "@/components/Statistics";
 
 const TriviaInterface = () => {
   // Dummy data for players in the leaderboard
@@ -20,6 +21,7 @@ const TriviaInterface = () => {
   // Question and options (for demonstration purposes)
   const [socketConnection, setSocketConnection] = useState(false);
   const [transport, setTransport] = useState("N/A");
+  const [closeStatisticsMenu, setCloseStatisticsMenu] = useState(true);
   const authStore = useAuth();
   const { user } = authStore();
 
@@ -39,6 +41,8 @@ const TriviaInterface = () => {
     roundEnded,
     setRoundEnded,
     leaveRoom,
+    triviaResult,
+    setTriviaResult,
   } = triviaStore();
 
   useEffect(() => {
@@ -144,6 +148,13 @@ const TriviaInterface = () => {
       });
     });
 
+    socket.on("gameEnded", ({ results }: { results: GameResult }) => {
+      console.log("Game has finished");
+      console.log(results);
+      setCloseStatisticsMenu(false);
+      setTriviaResult(results);
+    });
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
 
@@ -158,6 +169,7 @@ const TriviaInterface = () => {
         socket.off("nextRound");
         socket.off("roundFinished");
         socket.off("playerLeft");
+        socket.off("gameEnded");
         onDisconnect();
         leaveRoom(socket, user);
       }
@@ -207,10 +219,16 @@ const TriviaInterface = () => {
     // setPlayersCount(0);
   }
 
-  console.log(state);
+  function closeStatistics() {
+    setCloseStatisticsMenu(true);
+  }
   return (
     // TODO: Separate components in future
     <div className="flex justify-between bg-background p-6 h-screen bg-gradient-to-r from-primary to-secondary">
+      {!closeStatisticsMenu && triviaResult && (
+        <Statistics gameResult={triviaResult} onClose={closeStatistics} />
+      )}
+
       <div className="absolute flex gap-3 text-white">
         <h2>Status: {socketConnection ? "connected" : "disconnected"}</h2>
         <h3>Transport : {transport}</h3>

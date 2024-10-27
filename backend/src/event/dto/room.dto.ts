@@ -35,6 +35,8 @@ export type Room = {
   state: string;
   maxPlayers: number;
   round: number;
+  maxRounds: number;
+  gameResult?: GameResult;
 };
 
 export enum RoomStates {
@@ -60,4 +62,35 @@ export interface ScoreUpdateDTO {
   isCorrect: boolean;
   timeTaken: number;
   totalTime: number;
+}
+
+
+export type PlayerPerformance = {
+  userId: string;
+  username: string;
+  totalScore: number;
+  rounds: RoundPerformance[],
+  correctAnswers: number;
+  wrongAnswers: number;
+  averageTimePerRound: number;
+  finalPosition: number;
+  status?: 'complete' | 'left';
+}
+
+
+export type RoundPerformance = {
+  round: number;
+  question: string;
+  selectedAnswer: string;
+  isCorrect: boolean;
+  timeTaken: number;
+  scoreGained: number;
+}
+
+export type GameResult = {
+  roomId: string;
+  playersPerformance: PlayerPerformance[],
+  totalRounds: number;
+  winningPlayer?: PlayerPerformance;
+  endTime: Date;
 }
