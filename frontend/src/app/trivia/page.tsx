@@ -159,6 +159,7 @@ const TriviaInterface = () => {
         socket.off("roundFinished");
         socket.off("playerLeft");
         onDisconnect();
+        leaveRoom(socket, user);
       }
     };
   }, [user]);
@@ -181,18 +182,11 @@ const TriviaInterface = () => {
     }
   }, [state]);
 
-  useEffect(() => {
-    return () => {
-      // if (socket.connected) {
-      //   if (user && roomId) {
-      //     const currentTrivia = trivia;
-      //     console.log("TRYING TO DC", currentTrivia);
-      //     socket.emit("leaveRoom", { roomId, player: user, trivia: currentTrivia });
-      //   }
-      // }
-      leaveRoom(socket, user);
-    };
-  }, [user, roomId]);
+  // useEffect(() => {
+  //   return () => {
+  //     leaveRoom(socket, user);
+  //   };
+  // }, [user, roomId]);
 
   function onConnect() {
     setSocketConnection(true);
@@ -208,8 +202,12 @@ const TriviaInterface = () => {
     console.log("Disconenct");
     setSocketConnection(false);
     setTransport("N/A");
+    // setRoomId("");
+    // setState("Waiting");
+    // setPlayersCount(0);
   }
 
+  console.log(state);
   return (
     // TODO: Separate components in future
     <div className="flex justify-between bg-background p-6 h-screen bg-gradient-to-r from-primary to-secondary">
@@ -218,40 +216,57 @@ const TriviaInterface = () => {
         <h3>Transport : {transport}</h3>
       </div>
       {loadingGame ? (
-        <h1 className="m-auto text-2xl font-bold text-white">
-          {state === "Waiting" ? (
-            <div>
-              {/* <div>{trivia.players}</div> */}
-              <div className="flex text-sm">
-                <span>users in queue:</span>
-                {Array.isArray(trivia.players) &&
-                  trivia.players?.map((player) => (
-                    <div key={player.userId}>
-                      <span className="p-1">{player?.username}</span>
-                    </div>
-                  ))}
-              </div>
+        <div className="m-auto flex flex-col items-center space-y-4 p-6 text-center text-white rounded-lg shadow-lg bg-gradient-to-b from-indigo-500 to-purple-700">
+          <h1 className="text-3xl font-bold animate-pulse mb-4">
+            {state === "Waiting" ? (
               <div>
-                Waiting for players {trivia.players.length} / {roomSize}
-              </div>
-            </div>
-          ) : (
-            state === "In Progress" &&
-            timerCountdown > 0 && (
-              <>
-                <div>Preparing the room</div>
-                <div>{timerCountdown}</div>
-                <div>
-                  {trivia.players.map((player) => (
-                    <div key={player.userId} className="text-sm">
-                      {player.username}
-                    </div>
-                  ))}
+                <div className="text-xl mb-2">Waiting for players...</div>
+                <div className="text-sm mb-4">
+                  Users in queue: {trivia.players.length} / {roomSize}
                 </div>
-              </>
-            )
-          )}
-        </h1>
+                <div className="w-full bg-gray-700 rounded-full h-2.5 mb-2">
+                  <div
+                    className="bg-green-400 h-2.5 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${(trivia.players.length / roomSize) * 100}%`,
+                    }}
+                  ></div>
+                </div>
+                <div className="flex flex-wrap justify-center mt-4 gap-2">
+                  {Array.isArray(trivia.players) &&
+                    trivia.players.map((player) => (
+                      <div
+                        key={player.userId}
+                        className="p-2 px-3 bg-gray-800 rounded-lg shadow text-sm text-center transition transform hover:scale-105"
+                      >
+                        {player?.username}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ) : (
+              state === "In Progress" &&
+              timerCountdown > 0 && (
+                <>
+                  <div className="text-xl">Preparing the room</div>
+                  <div className="text-4xl font-bold animate-pulse my-2">
+                    {timerCountdown}
+                  </div>
+                  <div className="flex flex-wrap justify-center mt-4 gap-2">
+                    {trivia.players.map((player) => (
+                      <div
+                        key={player.userId}
+                        className="p-2 px-3 bg-gray-800 rounded-lg shadow text-sm text-center transition transform hover:scale-105"
+                      >
+                        {player.username}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )
+            )}
+          </h1>
+        </div>
       ) : (
         <TriviaQuestion
           user={user}

@@ -55,7 +55,10 @@ const createStore = () =>
       const { trivia, roomId } = get();
 
       if (socket.connected && roomId && user) {
-        console.log("TRYING TO DC", trivia);
+        console.log("User leaving", roomId);
+        set({ roomId: "" });
+        set({ state: "Waiting" });
+        set({ playersCount: 0 });
         socket.emit("leaveRoom", { roomId, player: user, trivia });
       }
     },

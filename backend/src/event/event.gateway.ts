@@ -224,6 +224,7 @@ export class EventGateway {
     const now = new Date();
     const lastRequestTime = this.userRequests.get(body.player.userId);
 
+    console.log("PLAYER REQUESTED TO LEAVE");
     if (lastRequestTime && now.getTime() - lastRequestTime.getTime() < 1000)
       return {
         event: 'duplicate',
@@ -249,15 +250,6 @@ export class EventGateway {
 
     if (room.players.length === 0) this.rooms.delete(body.roomId);
     else {
-      // console.log("Player left", );
-      // console.log(body.trivia);
-      // players: Player[];
-      // question: string;
-      // correctAnswer: string;
-      // options: string[];
-      // round: number;
-      // body.trivia.question = room.questions[room.round].question;
-      // body.trivia.correctAnswer = room.questions[room.round].correct_answer;
       client.in(body.roomId).emit('playerLeft', { room: body.trivia, players: room.players });
       this.rooms.set(body.roomId, room);
     }
