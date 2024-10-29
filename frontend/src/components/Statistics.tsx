@@ -1,6 +1,13 @@
+import { GameResult } from "@/lib/types";
 import React from "react";
 
-const Statistics = ({ gameResult, onClose }) => {
+
+interface StatisticsProps {
+  gameResult: GameResult,
+  onClose: () => void;
+}
+
+const Statistics = ({ gameResult, onClose } : StatisticsProps) => {
   const { winningPlayer, playersPerformance, totalRounds, endTime } =
     gameResult;
 
@@ -18,7 +25,7 @@ const Statistics = ({ gameResult, onClose }) => {
         <div className="text-center text-xl mb-4">
           Winner:{" "}
           <span className="font-bold text-yellow-400">
-            {winningPlayer.username}
+            {winningPlayer?.username}
           </span>
         </div>
 
@@ -46,7 +53,7 @@ const Statistics = ({ gameResult, onClose }) => {
               >
                 <span
                   className={`text-lg ${
-                    player.userId === winningPlayer.userId
+                    player.userId === winningPlayer?.userId
                       ? "text-yellow-400"
                       : ""
                   }`}
