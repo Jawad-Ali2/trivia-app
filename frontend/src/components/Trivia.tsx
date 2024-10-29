@@ -13,19 +13,35 @@ interface TriviaProps {
   user: User;
   trivia: Trivia;
   roomId: string;
+  // setRoundFinished: () => void;
   roundFinished: boolean;
+  resetQuestionTimer: boolean;
+  setResetQuestionTimer: (value: boolean) => void;
+  afkCount: number;
+  increasePlayerAfkCount: () => void;
 }
 
-function TriviaQuestion({ user, trivia, roomId, roundFinished }: TriviaProps) {
+function TriviaQuestion({
+  user,
+  trivia,
+  roomId,
+  roundFinished,
+  resetQuestionTimer,
+  setResetQuestionTimer,
+  afkCount,
+  increasePlayerAfkCount
+}: TriviaProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [playerScore, setPlayerScore] = useState(100); // Player's score
-  const [timer, setTimer] = useState(60);
+  const [playerScore, setPlayerScore] = useState(0); // Player's score
+  const [timer, setTimer] = useState(5);
   const [showOverlay, setShowOverlay] = useState(true);
   const answerTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    console.log("The TRIVIA component re rendered and useEffect called");
-    if (!roundFinished && !answerTimer.current) {
+    // Check to start the timer
+    if (!answerTimer.current && !resetQuestionTimer && !roundFinished && !showOverlay) {
+      console.log("Starting timer");
+      setTimer(5); // Reset timer to initial value
       answerTimer.current = setInterval(() => {
         setTimer((prev) => {
           if (prev <= 1) {
@@ -33,53 +49,60 @@ function TriviaQuestion({ user, trivia, roomId, roundFinished }: TriviaProps) {
             answerTimer.current = null;
             return 0;
           }
-
           return prev - 1;
         });
       }, 1000);
     }
 
+    // Check to reset or stop the timer
+    if (resetQuestionTimer || roundFinished) {
+      console.log("Stopping and resetting timer");
+      if (answerTimer.current !== null) {
+        clearInterval(answerTimer.current);
+        answerTimer.current = null;
+      }
+      if (roundFinished) setShowOverlay(true); // Show overlay if round is finished
+    }
+
+    // Cleanup function to stop the timer if the component unmounts
     return () => {
       if (answerTimer.current !== null) {
         clearInterval(answerTimer.current);
         answerTimer.current = null;
       }
     };
-  }, [trivia]);
+  }, [resetQuestionTimer, roundFinished, showOverlay]);
 
   useEffect(() => {
-    console.log("Round finished", answerTimer.current);
-    if (roundFinished) {
-      setSelectedAnswer(null);
-      setShowOverlay(true);
-      if (answerTimer.current !== null) {
-        clearInterval(answerTimer.current);
-        answerTimer.current = null;
-        setTimer(60);
-      }
+    if (selectedAnswer) setSelectedAnswer(null);
+  }, [trivia.questionNo]);
+
+  useEffect(() => {
+    if(timer === 0 && !selectedAnswer){
+      handleAnswerClick("");
+      increasePlayerAfkCount();
     }
-  }, [roundFinished]);
+  }, [timer])
 
   // Handle selecting an answer
   const handleAnswerClick = (option: string) => {
     if (!selectedAnswer) {
       setSelectedAnswer(option);
       // Save the answer logic here...
-
       const isCorrect = trivia.correctAnswer === option;
-      console.log(isCorrect, roomId);
 
       const answerSubmitDTO: ScoreUpdateDTO = {
         userId: user.userId,
-        // question: trivia.question,
         trivia,
         roomId: roomId,
         optionSelected: option,
         isCorrect,
         timeTaken: timer,
         totalTime: 60,
+        questionIndex: trivia.questionNo,
       };
 
+      setResetQuestionTimer(true);
       socket.emit("submitAnswer", answerSubmitDTO);
     }
   };
@@ -87,12 +110,20 @@ function TriviaQuestion({ user, trivia, roomId, roundFinished }: TriviaProps) {
   return (
     <>
       {/* Trivia Question Section */}
-      {showOverlay && <GameOverlay roundNo={trivia.round} onComplete={() => setShowOverlay(false)} />}
+      {showOverlay && (
+        <GameOverlay
+          roundNo={trivia.round + 1}
+          onComplete={() => setShowOverlay(false)}
+        />
+      )}
       {!showOverlay && (
         <div className="w-2/3 p-4 flex flex-col justify-center items-center">
           <div className="flex gap-3">
             <div className="text-xl mt-10">Time Remaining: {timer}</div>
             <div className="text-xl mt-10">Round# {trivia.round + 1}</div>
+            <div className="text-xl mt-10">
+              Question# {trivia.questionNo + 1}
+            </div>
           </div>
           <div className="bg-card p-8 rounded-md shadow-lg text-center relative w-full">
             <h3 className="text-2xl font-bold text-foreground mb-6">

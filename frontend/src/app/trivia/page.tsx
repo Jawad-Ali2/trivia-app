@@ -12,16 +12,19 @@ import { setInterval } from "worker-timers";
 import { GameResult, Player, User } from "@/lib/types";
 import TriviaQuestion from "@/components/Trivia";
 import Statistics from "@/components/Statistics";
+import { useToast } from "@/hooks/use-toast";
 
 const TriviaInterface = () => {
   // Dummy data for players in the leaderboard
   const [loadingGame, setLoadingGame] = useState(true); // Whenever the user opens this page they'll see waiting states
   const [timerCountdown, setTimerCountdown] = useState(5);
+  const [isAfk, setIsAfk] = useState(false);
 
   // Question and options (for demonstration purposes)
   const [socketConnection, setSocketConnection] = useState(false);
   const [transport, setTransport] = useState("N/A");
   const [closeStatisticsMenu, setCloseStatisticsMenu] = useState(true);
+  const { toast } = useToast();
   const authStore = useAuth();
   const { user } = authStore();
 
@@ -43,6 +46,10 @@ const TriviaInterface = () => {
     leaveRoom,
     triviaResult,
     setTriviaResult,
+    resetQuestionTimer,
+    setResetQuestionTimer,
+    playerAfkCount,
+    increasePlayerAfkCount,
   } = triviaStore();
 
   useEffect(() => {
@@ -69,7 +76,7 @@ const TriviaInterface = () => {
     }
 
     // Whenever the user loads the page they'll see different states of game loading
-    socket.on("roomJoined", ({ roomId, players, roomSize }) => {
+    socket.on("roomJoined", ({ roomId, players, roomSize, questionNo }) => {
       console.log("Joined the game");
 
       setRoomId(roomId);
@@ -81,37 +88,43 @@ const TriviaInterface = () => {
         correctAnswer: "0",
         options: [],
         round: 0,
+        questionNo: questionNo,
       });
     });
 
     // ! Waiting For Player (1/4)
-    socket.on("playerJoined", (players) => {
+    socket.on("playerJoined", ({ players, questionNo }) => {
       console.log(" player Joined the game");
 
-      setPlayersCount(players.players.length);
+      setPlayersCount(players.length);
       setTrivia({
-        players: players.players,
+        players: players,
         question: "",
         correctAnswer: "0",
         options: [],
         round: 0,
+        questionNo: questionNo,
       });
     });
     // ! Preparing the room
     // ! Start
-    socket.on("startGame", ({ roomId, players, question, options }) => {
-      console.log("START GAME");
-      setRoomId(roomId);
-      setTrivia({
-        players: players,
-        question: question.question,
-        correctAnswer: question.correct_answer,
-        // wrongAnswers: question.incorrect_answers,
-        options: options,
-        round: 0,
-      });
-      setState("In Progress");
-    });
+    socket.on(
+      "startGame",
+      ({ roomId, players, question, options, questionNo }) => {
+        console.log("START GAME");
+        setRoomId(roomId);
+        setTrivia({
+          players: players,
+          question: question.question,
+          correctAnswer: question.correct_answer,
+          // wrongAnswers: question.incorrect_answers,
+          options: options,
+          round: 0,
+          questionNo: questionNo,
+        });
+        setState("In Progress");
+      }
+    );
 
     socket.on("scoreUpdate", ({ players, room }) => {
       setTrivia({
@@ -120,23 +133,44 @@ const TriviaInterface = () => {
       });
     }); // Update score
 
-    socket.on("nextRound", ({ roomId, players, question, options, round }) => {
-      console.log("Next round");
-      setTrivia({
-        players: players,
-        question: question.question,
-        correctAnswer: question.correct_answer,
-        // wrongAnswers: question.incorrect_answers,
-        options: options,
-        round: round,
-      });
-      setRoundEnded(false);
-    });
+    socket.on(
+      "nextQuestion",
+      ({ roomId, players, question, options, round, questionNo }) => {
+        console.log("Next question");
+        setTrivia({
+          players: players,
+          question: question.question,
+          correctAnswer: question.correct_answer,
+          options: options,
+          round: round,
+          questionNo: questionNo,
+        });
+        setResetQuestionTimer(false);
+      }
+    );
+
+    socket.on(
+      "nextRound",
+      ({ roomId, players, question, options, round, questionNo }) => {
+        console.log("Next round");
+        setTrivia({
+          players: players,
+          question: question.question,
+          correctAnswer: question.correct_answer,
+          options: options,
+          round: round,
+          questionNo: questionNo,
+        });
+        setRoundEnded(false);
+        setResetQuestionTimer(false);
+      }
+    );
 
     socket.on(
       "roundFinished",
       ({ roundFinished }: { roundFinished: boolean }) => {
         setRoundEnded(roundFinished);
+        setResetQuestionTimer(true);
       }
     );
 
@@ -150,7 +184,6 @@ const TriviaInterface = () => {
 
     socket.on("gameEnded", ({ results }: { results: GameResult }) => {
       console.log("Game has finished");
-      console.log(results);
       setCloseStatisticsMenu(false);
       setTriviaResult(results);
     });
@@ -166,6 +199,7 @@ const TriviaInterface = () => {
         socket.off("roomJoined");
         socket.off("startGame");
         socket.off("scoreUpdate");
+        socket.off("nextQuestion");
         socket.off("nextRound");
         socket.off("roundFinished");
         socket.off("playerLeft");
@@ -194,11 +228,19 @@ const TriviaInterface = () => {
     }
   }, [state]);
 
-  // useEffect(() => {
-  //   return () => {
-  //     leaveRoom(socket, user);
-  //   };
-  // }, [user, roomId]);
+  useEffect(() => {
+    if (playerAfkCount === 1) {
+      toast({
+        title: "AFK Warning",
+        description: "If you stay AFK for one more round you'll be kicked.",
+      });
+    }
+
+    if (playerAfkCount === 2 && socket.connected && user) {
+      leaveRoom(socket, user);
+      setIsAfk(true);
+    }
+  }, [playerAfkCount]);
 
   function onConnect() {
     setSocketConnection(true);
@@ -222,6 +264,30 @@ const TriviaInterface = () => {
   function closeStatistics() {
     setCloseStatisticsMenu(true);
   }
+
+  function handleReturnFromAFK() {
+    setIsAfk(false);
+  }
+  console.log(isAfk);
+
+  if (isAfk) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
+            <p className="text-lg font-semibold">You were detected as AFK.</p>
+            <button
+              onClick={handleReturnFromAFK}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+            >
+              I'm Back!
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     // TODO: Separate components in future
     <div className="flex justify-between bg-background p-6 h-screen bg-gradient-to-r from-primary to-secondary">
@@ -291,6 +357,10 @@ const TriviaInterface = () => {
           trivia={trivia}
           roomId={roomId}
           roundFinished={roundEnded}
+          resetQuestionTimer={resetQuestionTimer}
+          setResetQuestionTimer={setResetQuestionTimer}
+          afkCount={playerAfkCount}
+          increasePlayerAfkCount={increasePlayerAfkCount}
         />
       )}
     </div>

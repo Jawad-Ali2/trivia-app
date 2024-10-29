@@ -21,6 +21,10 @@ const createStore = () =>
     leaveRoom: (socket: any, user: any) => void;
     triviaResult: GameResult;
     setTriviaResult: (results: GameResult) => void;
+    resetQuestionTimer: boolean;
+    setResetQuestionTimer: (value: boolean) => void;
+    playerAfkCount: number;
+    increasePlayerAfkCount: () => void;
   }>((set, get) => ({
     state: "Waiting",
     setState: (newState: string) => {
@@ -40,6 +44,7 @@ const createStore = () =>
       correctAnswer: "",
       options: [],
       round: 0,
+      questionNo: 0,
     },
     setTrivia: (newTrivia: any) => {
       set({ trivia: newTrivia });
@@ -83,6 +88,15 @@ const createStore = () =>
     },
     setTriviaResult: (results) => {
       set({ triviaResult: results });
+    },
+    resetQuestionTimer: false,
+    setResetQuestionTimer: (value: boolean) => {
+      set({ resetQuestionTimer: value });
+    },
+    playerAfkCount: 0,
+    increasePlayerAfkCount: () => {
+      console.log(get().playerAfkCount);
+      set({ playerAfkCount: get().playerAfkCount + 1 });
     },
   }));
 

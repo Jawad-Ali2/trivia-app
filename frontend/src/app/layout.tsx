@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import TriviaProvider from "@/store/TriviaProvider";
 import AuthProvider from "@/store/AuthProvider";
 import SocketProvider from "@/store/SocketProvider";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -38,6 +39,7 @@ export default function RootLayout({
             {/* <SocketProvider> */}
               <Navbar />
               {children}
+              <Toaster />
             {/* </SocketProvider> */}
           </TriviaProvider>
         </AuthProvider>

@@ -3,6 +3,7 @@ export type Trivia = {
   question: string;
   correctAnswer: string;
   options: string[];
+  questionNo: number;
   round: number;
 };
 
@@ -40,6 +41,7 @@ export interface ScoreUpdateDTO {
   // question: string;
   trivia: Trivia;
   roomId: string;
+  questionIndex: number;
   optionSelected: string;
   isCorrect: boolean;
   timeTaken: number;
@@ -60,11 +62,13 @@ export type PlayerPerformance = {
 
 export type RoundPerformance = {
   round: number;
-  question: string;
-  selectedAnswer: string;
-  isCorrect: boolean;
-  timeTaken: number;
-  scoreGained: number;
+  questions: {
+    question: string;
+    selectedAnswer: string;
+    isCorrect: boolean;
+    timeTaken: number;
+    scoreGained: number;
+  }[];
 };
 
 export type GameResult = {

@@ -30,12 +30,14 @@ export type Answer = {
 export type Room = {
   players: Player[];
   sockets: string[];
-  questions: TriviaQuestions[];
+  questions: TriviaQuestions[][];
   playerAnswers: Answer[];
   state: string;
   maxPlayers: number;
   round: number;
+  currentQuestionNo: number;
   maxRounds: number;
+  questionsPerRound: number; // New field
   gameResult?: GameResult;
 };
 
@@ -50,6 +52,7 @@ export type Trivia = {
   question: string;
   correctAnswer: string;
   options: string[];
+  questionNo: number;
   round: number;
 };
 
@@ -58,39 +61,40 @@ export interface ScoreUpdateDTO {
   // question: string;
   trivia: Trivia;
   roomId: string;
+  questionIndex: number;
   optionSelected: string;
   isCorrect: boolean;
   timeTaken: number;
   totalTime: number;
 }
 
-
 export type PlayerPerformance = {
   userId: string;
   username: string;
   totalScore: number;
-  rounds: RoundPerformance[],
+  rounds: RoundPerformance[];
   correctAnswers: number;
   wrongAnswers: number;
   averageTimePerRound: number;
   finalPosition: number;
   status?: 'complete' | 'left';
-}
-
+};
 
 export type RoundPerformance = {
   round: number;
-  question: string;
-  selectedAnswer: string;
-  isCorrect: boolean;
-  timeTaken: number;
-  scoreGained: number;
-}
+  questions: {
+    question: string;
+    selectedAnswer: string;
+    isCorrect: boolean;
+    timeTaken: number;
+    scoreGained: number;
+  }[];
+};
 
 export type GameResult = {
   roomId: string;
-  playersPerformance: PlayerPerformance[],
+  playersPerformance: PlayerPerformance[];
   totalRounds: number;
   winningPlayer?: PlayerPerformance;
   endTime: Date;
-}
+};
