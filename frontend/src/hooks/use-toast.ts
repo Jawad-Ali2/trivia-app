@@ -52,7 +52,7 @@ type Action =
       toastId?: ToasterToast["id"]
     }
 
-type State = {
+interface State {
   toasts: ToasterToast[]
 }
 
