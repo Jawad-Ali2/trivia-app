@@ -53,6 +53,8 @@ function Login({ isOpen, onClose }: LoginProps) {
         password: values.password,
       });
 
+      console.log(process.env.NEXT_PUBLIC_BACKEND_URL);
+
       if (response.status === 200) {
         const data = response.data;
         console.log("Logged in successfully", data);
