@@ -18,10 +18,10 @@ import { z } from "zod";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/store/AuthProvider";
 
-type LoginProps = {
+interface LoginProps {
   isOpen: boolean;
   onClose: () => void;
-};
+}
 
 const formSchema = z.object({
   username: z
@@ -35,7 +35,7 @@ const formSchema = z.object({
   }),
 });
 
-export default function Login({ isOpen, onClose }: LoginProps) {
+function Login({ isOpen, onClose }: LoginProps) {
   const store = useAuth();
   const { setIsAuthenticated, setAccessToken, setUser } = store();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -123,3 +123,5 @@ export default function Login({ isOpen, onClose }: LoginProps) {
     </>
   );
 }
+
+export default Login;
