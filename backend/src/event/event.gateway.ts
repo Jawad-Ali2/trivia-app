@@ -121,7 +121,7 @@ export class EventGateway {
   }
 
   @SubscribeMessage('submitAnswer')
-  submitAnswer(
+  async submitAnswer(
     @MessageBody() body: ScoreUpdateDTO,
     @ConnectedSocket() client: Socket,
   ) {
@@ -277,7 +277,7 @@ export class EventGateway {
           client.in(roomId).emit('gameEnded', { results: room.gameResult });
           console.log('Game ended brother!');
         } else {
-          const fetchedQuestions = getQuestions(
+          const fetchedQuestions = await getQuestions(
             this.rooms.get(roomId).questionsPerRound,
           );
 
