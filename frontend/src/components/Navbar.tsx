@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import Image from "next/image";
-import Login from "@/app/(auth)/login/page";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/store/AuthProvider";
+import Login from "./Login";
 
 export default function Navbar() {
   const store = useAuth();
