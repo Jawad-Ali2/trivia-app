@@ -10,7 +10,7 @@ import { useAuth } from "@/store/AuthProvider";
 
 export default function Navbar() {
   const store = useAuth();
-  const { isAuthenticated, setIsAuthenticated, setAccessToken, setUser, user } =
+  const { isAuthenticated, setIsAuthenticated, setAccessToken, setUser } =
     store();
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const [showMenu, setShowMenu] = useState<boolean>(false);
