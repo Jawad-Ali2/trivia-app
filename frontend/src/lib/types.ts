@@ -36,7 +36,7 @@ export type User = {
   role: string;
 };
 
-export interface ScoreUpdateDTO {
+export type ScoreUpdateDTO = {
   userId: string;
   // question: string;
   trivia: Trivia;
