@@ -32,7 +32,7 @@ export default function Navbar() {
           setIsAuthenticated(false);
           setAccessToken("");
           setUser({
-            userId: NaN,
+            userId: "",
             username: "",
             email: "",
             role: "",

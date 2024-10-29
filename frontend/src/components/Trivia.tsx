@@ -33,7 +33,7 @@ function TriviaQuestion({
 }: TriviaProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [playerScore, setPlayerScore] = useState(0); // Player's score
-  const [timer, setTimer] = useState(5);
+  const [timer, setTimer] = useState(30);
   const [showOverlay, setShowOverlay] = useState(true);
   const answerTimer = useRef<number | null>(null);
 
@@ -41,7 +41,7 @@ function TriviaQuestion({
     // Check to start the timer
     if (!answerTimer.current && !resetQuestionTimer && !roundFinished && !showOverlay) {
       console.log("Starting timer");
-      setTimer(5); // Reset timer to initial value
+      setTimer(30); // Reset timer to initial value
       answerTimer.current = setInterval(() => {
         setTimer((prev) => {
           if (prev <= 1) {

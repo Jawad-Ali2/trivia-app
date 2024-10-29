@@ -12,7 +12,7 @@ const createStore = () =>
     setAccessToken: (value: string) => void;
     user: User;
     setUser: (value: {
-      userId: number;
+      userId: string;
       username: string;
       email: string;
       role: string;
@@ -27,7 +27,7 @@ const createStore = () =>
       set({ accessToken: value });
     },
     user: {
-      userId: NaN,
+      userId: "",
       username: "",
       email: "",
       role: "",
