@@ -2,7 +2,12 @@
 import { useEffect } from 'react';
 import { setTimeout, clearTimeout } from 'worker-timers';
 
-export default function GameOverlay({ onComplete, roundNo }) {
+interface GameOverlayProps{
+  onComplete: () => void;
+  roundNo: number
+}
+
+function GameOverlay({ onComplete, roundNo }: GameOverlayProps) {
   useEffect(() => {
     const timer = setTimeout(() => onComplete(), 1000); // 1s duration for animation
     return () => clearTimeout(timer);
@@ -17,3 +22,6 @@ export default function GameOverlay({ onComplete, roundNo }) {
     </div>
   );
 }
+
+
+export default GameOverlay;
