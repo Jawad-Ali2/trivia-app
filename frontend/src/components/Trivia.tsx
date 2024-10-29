@@ -9,7 +9,7 @@ import { ScoreUpdateDTO, Trivia, User } from "@/lib/types";
 import { setInterval, clearInterval } from "worker-timers";
 import GameOverlay from "./GameOverlay";
 
-interface TriviaProps {
+type TriviaProps= {
   user: User;
   trivia: Trivia;
   roomId: string;

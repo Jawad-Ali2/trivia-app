@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 
-interface ModalProps {
+type ModalProps= {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
