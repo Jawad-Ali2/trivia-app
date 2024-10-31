@@ -46,6 +46,7 @@ export type ScoreUpdateDTO = {
   isCorrect: boolean;
   timeTaken: number;
   totalTime: number;
+  givenOptions: string[];
 }
 
 export type PlayerPerformance = {

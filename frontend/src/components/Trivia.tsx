@@ -100,6 +100,7 @@ function TriviaQuestion({
         timeTaken: timer,
         totalTime: 60,
         questionIndex: trivia.questionNo,
+        givenOptions: trivia.options,
       };
 
       setResetQuestionTimer(true);

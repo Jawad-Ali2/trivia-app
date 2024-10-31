@@ -1,9 +1,10 @@
-import axios from "axios";
+import axios from 'axios';
+import * as he from 'he';
 
 export function calculateScore(isCorrect: boolean, timeTaken: number) {
   const baseScore = 100;
-  const maxBonus = 50;
-  const penaltyPerSecond = 10;
+  const maxBonus = 100;
+  const penaltyPerSecond = 5;
 
   if (!isCorrect) {
     return 0;
@@ -88,6 +89,29 @@ export async function getQuestions(requiredQuestions: number) {
   const response = await axios.get('https://opentdb.com/api.php?amount=5');
 
   const data = response.data;
+
+  data.results.forEach(
+    (question: {
+      type: string;
+      difficulty: string;
+      category: string;
+      question: string;
+      correct_answer: string;
+      incorrect_answers: string[];
+    }) => {
+      question.question = he.decode(question.question);
+
+      // Decode the correct answer text
+      question.correct_answer = he.decode(question.correct_answer);
+
+      // Decode each incorrect answer
+      question.incorrect_answers = question.incorrect_answers.map(
+        (wrongAns: string) => {
+          return he.decode(wrongAns);
+        },
+      );
+    },
+  );
 
   return data.results;
 }

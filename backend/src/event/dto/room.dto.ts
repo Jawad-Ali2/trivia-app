@@ -56,7 +56,7 @@ export type Trivia = {
   round: number;
 };
 
-export interface ScoreUpdateDTO {
+export type ScoreUpdateDTO = {
   userId: string;
   // question: string;
   trivia: Trivia;
@@ -66,6 +66,7 @@ export interface ScoreUpdateDTO {
   isCorrect: boolean;
   timeTaken: number;
   totalTime: number;
+  givenOptions: string[];
 }
 
 export type PlayerPerformance = {

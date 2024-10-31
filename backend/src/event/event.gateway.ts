@@ -134,17 +134,12 @@ export class EventGateway {
       isCorrect,
       timeTaken,
       totalTime,
+      givenOptions,
     } = body;
     let playersAnsweredCount = 0;
     let disconnectedPlayer = 0;
 
     const room = this.rooms.get(roomId);
-    console.log(
-      'JJJJ',
-      room.currentQuestionNo,
-      questionIndex,
-      room.questionsPerRound,
-    );
     const score = calculateScore(isCorrect, totalTime - timeTaken);
 
     room.players.forEach((player) => {
@@ -166,6 +161,7 @@ export class EventGateway {
           player.wrongAnswers++;
         }
 
+        // For keeping record of each answer
         room.gameResult.playersPerformance.forEach((playerPerformance) => {
           if (playerPerformance.userId === player.userId) {
             playerPerformance.averageTimePerRound =
@@ -212,40 +208,39 @@ export class EventGateway {
       if (player.answered) playersAnsweredCount++;
     });
 
-    room.players.sort((a, b) => b.score - a.score);
+    room.players.sort((a, b) => b.score - a.score); // Sort players based on score
 
     room.players.forEach((player, index) => {
+      // Update player position
       player.position = index + 1;
     });
 
+    // If all the players have answered the question
     if (room.maxPlayers === playersAnsweredCount + disconnectedPlayer) {
-      // current round has finished
-      // if(room.round ) // TODO: If the rounds equal to lobby rounds limit we finish the game
-
       room.players.forEach((player) => {
         player.answered = false;
       });
 
-      const options = getShuffledOptions(
-        room.questions[room.round][questionIndex].incorrect_answers,
-        room.questions[room.round][questionIndex].correct_answer,
-      );
-
-      // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
-      trivia.correctAnswer =
-        room.questions[room.round][questionIndex].correct_answer;
-      trivia.options = options;
-      trivia.players = room.players;
-      trivia.question = room.questions[room.round][questionIndex].question;
-
       if (room.currentQuestionNo < room.questionsPerRound) {
-        console.log(room.currentQuestionNo, room.questionsPerRound);
+        // Preparing next question
+        const options = getShuffledOptions(
+          room.questions[room.round][room.currentQuestionNo + 1]
+            .incorrect_answers,
+          room.questions[room.round][room.currentQuestionNo + 1].correct_answer,
+        );
+        // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
+        trivia.correctAnswer =
+          room.questions[room.round][room.currentQuestionNo + 1].correct_answer;
+        trivia.options = options;
+        trivia.players = room.players;
+        trivia.question =
+          room.questions[room.round][room.currentQuestionNo + 1].question;
         room.currentQuestionNo++;
 
         client.emit('nextQuestion', {
           roomId: roomId,
           players: room.players,
-          question: room.questions[room.round][questionIndex],
+          question: room.questions[room.round][room.currentQuestionNo],
           options,
           round: room.round,
           questionNo: room.currentQuestionNo,
@@ -253,7 +248,7 @@ export class EventGateway {
         client.in(roomId).emit('nextQuestion', {
           roomId: roomId,
           players: room.players,
-          question: room.questions[room.round][questionIndex],
+          question: room.questions[room.round][room.currentQuestionNo],
           options,
           round: room.round,
           questionNo: room.currentQuestionNo,
@@ -269,10 +264,7 @@ export class EventGateway {
             room.gameResult.playersPerformance.find(
               (player) => player.finalPosition === 1,
             );
-
-          // TODO: Handle end game logic
-          // TODO: Show user's performance during each question (For this I have to prepare another state that keeps track of user's activity)
-          // Send performance along too
+            
           client.emit('gameEnded', { results: room.gameResult });
           client.in(roomId).emit('gameEnded', { results: room.gameResult });
           console.log('Game ended brother!');
@@ -282,6 +274,22 @@ export class EventGateway {
           );
 
           room.questions[room.round] = fetchedQuestions;
+
+          console.log(
+            room.questions[room.round][room.currentQuestionNo].question,
+          );
+          const options = getShuffledOptions(
+            room.questions[room.round][room.currentQuestionNo]
+              .incorrect_answers,
+            room.questions[room.round][room.currentQuestionNo].correct_answer,
+          );
+
+          trivia.correctAnswer =
+            room.questions[room.round][room.currentQuestionNo].correct_answer;
+          trivia.options = options;
+          trivia.players = room.players;
+          trivia.question =
+            room.questions[room.round][room.currentQuestionNo].question;
 
           // Stop every player's countdown and let them know next round is starting
           client.emit('roundFinished', {
@@ -294,7 +302,7 @@ export class EventGateway {
           client.emit('nextRound', {
             roomId: roomId,
             players: room.players,
-            question: room.questions[room.round][room.currentQuestionNo],
+            question: fetchedQuestions[room.currentQuestionNo],
             options,
             round: room.round,
             questionNo: room.currentQuestionNo,
@@ -302,7 +310,7 @@ export class EventGateway {
           client.in(roomId).emit('nextRound', {
             roomId: roomId,
             players: room.players,
-            question: room.questions[room.round][room.currentQuestionNo],
+            question: fetchedQuestions[room.currentQuestionNo],
             options,
             round: room.round,
             questionNo: room.currentQuestionNo,
