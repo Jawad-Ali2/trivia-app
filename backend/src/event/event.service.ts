@@ -325,11 +325,6 @@ export class EventService {
       questionIndex,
     );
 
-    console.log(
-      'Players Answered Count',
-      playersAnsweredCount,
-      disconnectedPlayers,
-    );
     // If all the players have answered the question
     if (room.maxPlayers === playersAnsweredCount + disconnectedPlayers) {
       room.players.forEach((player) => {
@@ -447,7 +442,6 @@ export class EventService {
   }
 
   async sendNextQuestionOrRound({ rooms, room, trivia, roomId, client }) {
-    console.log('INSIDE SUBMIT', rooms);
     if (room.currentQuestionNo < room.questionsPerRound) {
       // Preparing next question
       const options = getShuffledOptions(
@@ -501,9 +495,6 @@ export class EventService {
 
         room.questions[room.round] = fetchedQuestions;
 
-        console.log(
-          room.questions[room.round][room.currentQuestionNo].question,
-        );
         const options = getShuffledOptions(
           room.questions[room.round][room.currentQuestionNo].incorrect_answers,
           room.questions[room.round][room.currentQuestionNo].correct_answer,
