@@ -268,7 +268,6 @@ const TriviaInterface = () => {
   function handleReturnFromAFK() {
     setIsAfk(false);
   }
-  console.log(isAfk);
 
   if (isAfk) {
     return (

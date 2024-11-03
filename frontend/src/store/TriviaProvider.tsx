@@ -60,7 +60,6 @@ const createStore = () =>
 
     leaveRoom: (socket: any, user: any) => {
       const { trivia, roomId } = get();
-
       if (socket.connected && roomId && user) {
         console.log("User leaving", roomId);
         set({ roomId: "" });

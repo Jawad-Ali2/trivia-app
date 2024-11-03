@@ -11,7 +11,6 @@ export class WsJwtGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    console.log("here guard");
     if (context.getType() !== 'ws') return true;
 
     // const client: Socket = context.switchToWs().getClient();

@@ -136,201 +136,30 @@ export class EventGateway {
       totalTime,
       givenOptions,
     } = body;
-    let playersAnsweredCount = 0;
-    let disconnectedPlayer = 0;
+    const now = new Date();
+    const lastRequestTime = this.userRequests.get(userId);
 
-    const room = this.rooms.get(roomId);
-    const score = calculateScore(isCorrect, totalTime - timeTaken);
+    if (lastRequestTime && now.getTime() - lastRequestTime.getTime() < 1000)
+      return {
+        event: 'duplicate',
+        data: 'Player sent too many requests at the same time',
+      };
 
-    room.players.forEach((player) => {
-      if (player.userId === userId) {
-        // TODO: Change this line
-        room.playerAnswers.push({
-          userId: player.userId,
-          answer: optionSelected,
-          isCorrect: isCorrect,
-          round: room.round,
-        });
+    this.userRequests.set(userId, now);
 
-        player.answered = true;
-        player.score += score;
-
-        if (isCorrect) {
-          player.correctAnswers++;
-        } else {
-          player.wrongAnswers++;
-        }
-
-        // For keeping record of each answer
-        room.gameResult.playersPerformance.forEach((playerPerformance) => {
-          if (playerPerformance.userId === player.userId) {
-            playerPerformance.averageTimePerRound =
-              (playerPerformance.averageTimePerRound * room.round +
-                (totalTime - timeTaken)) /
-              (room.round + 1);
-
-            playerPerformance.correctAnswers = player.correctAnswers;
-            playerPerformance.wrongAnswers = player.wrongAnswers;
-            if (room.round === room.maxRounds) {
-              playerPerformance.totalScore = player.score;
-              playerPerformance.finalPosition = player.position;
-
-              playerPerformance.status =
-                player.status === 'playing' ? 'complete' : 'left';
-            }
-
-            // Checks first if the round changed or we have to push in an existing round
-            const existingRound = playerPerformance.rounds.find(
-              (response) => response.round === room.round,
-            );
-
-            const newQuestionRecord = {
-              question: room.questions[room.round][questionIndex].question,
-              selectedAnswer: optionSelected,
-              isCorrect: isCorrect,
-              timeTaken: timeTaken,
-              scoreGained: score,
-            };
-
-            if (existingRound) {
-              existingRound.questions.push(newQuestionRecord);
-            } else {
-              playerPerformance.rounds.push({
-                round: room.round,
-                questions: [newQuestionRecord],
-              });
-            }
-          }
-        });
-      }
-
-      if (player.status === 'left') disconnectedPlayer++;
-      if (player.answered) playersAnsweredCount++;
+    await this.eventService.submitQuestion({
+      userId,
+      trivia,
+      roomId,
+      optionSelected,
+      questionIndex,
+      isCorrect,
+      timeTaken,
+      totalTime,
+      givenOptions,
+      client,
+      rooms: this.rooms,
     });
-
-    room.players.sort((a, b) => b.score - a.score); // Sort players based on score
-
-    room.players.forEach((player, index) => {
-      // Update player position
-      player.position = index + 1;
-    });
-
-    // If all the players have answered the question
-    if (room.maxPlayers === playersAnsweredCount + disconnectedPlayer) {
-      room.players.forEach((player) => {
-        player.answered = false;
-      });
-
-      if (room.currentQuestionNo < room.questionsPerRound) {
-        // Preparing next question
-        const options = getShuffledOptions(
-          room.questions[room.round][room.currentQuestionNo + 1]
-            .incorrect_answers,
-          room.questions[room.round][room.currentQuestionNo + 1].correct_answer,
-        );
-        // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
-        trivia.correctAnswer =
-          room.questions[room.round][room.currentQuestionNo + 1].correct_answer;
-        trivia.options = options;
-        trivia.players = room.players;
-        trivia.question =
-          room.questions[room.round][room.currentQuestionNo + 1].question;
-        room.currentQuestionNo++;
-
-        client.emit('nextQuestion', {
-          roomId: roomId,
-          players: room.players,
-          question: room.questions[room.round][room.currentQuestionNo],
-          options,
-          round: room.round,
-          questionNo: room.currentQuestionNo,
-        });
-        client.in(roomId).emit('nextQuestion', {
-          roomId: roomId,
-          players: room.players,
-          question: room.questions[room.round][room.currentQuestionNo],
-          options,
-          round: room.round,
-          questionNo: room.currentQuestionNo,
-        });
-      } else {
-        room.round++;
-        room.currentQuestionNo = 0;
-
-        if (room.round > room.maxRounds) {
-          console.log(room.round, room.maxRounds);
-          room.gameResult.endTime = new Date();
-          room.gameResult.winningPlayer =
-            room.gameResult.playersPerformance.find(
-              (player) => player.finalPosition === 1,
-            );
-            
-          client.emit('gameEnded', { results: room.gameResult });
-          client.in(roomId).emit('gameEnded', { results: room.gameResult });
-          console.log('Game ended brother!');
-        } else {
-          const fetchedQuestions = await getQuestions(
-            this.rooms.get(roomId).questionsPerRound,
-          );
-
-          room.questions[room.round] = fetchedQuestions;
-
-          console.log(
-            room.questions[room.round][room.currentQuestionNo].question,
-          );
-          const options = getShuffledOptions(
-            room.questions[room.round][room.currentQuestionNo]
-              .incorrect_answers,
-            room.questions[room.round][room.currentQuestionNo].correct_answer,
-          );
-
-          trivia.correctAnswer =
-            room.questions[room.round][room.currentQuestionNo].correct_answer;
-          trivia.options = options;
-          trivia.players = room.players;
-          trivia.question =
-            room.questions[room.round][room.currentQuestionNo].question;
-
-          // Stop every player's countdown and let them know next round is starting
-          client.emit('roundFinished', {
-            roundFinished: true,
-          });
-          client.in(roomId).emit('roundFinished', {
-            roundFinished: true,
-          });
-          // Emit next round announcement here
-          client.emit('nextRound', {
-            roomId: roomId,
-            players: room.players,
-            question: fetchedQuestions[room.currentQuestionNo],
-            options,
-            round: room.round,
-            questionNo: room.currentQuestionNo,
-          });
-          client.in(roomId).emit('nextRound', {
-            roomId: roomId,
-            players: room.players,
-            question: fetchedQuestions[room.currentQuestionNo],
-            options,
-            round: room.round,
-            questionNo: room.currentQuestionNo,
-          });
-        }
-      }
-    }
-
-    if (room.round <= room.maxRounds) {
-      trivia.round = room.round;
-      trivia.questionNo = room.currentQuestionNo;
-    }
-    this.rooms.set(roomId, room);
-
-    // console.log(room.players);
-    client.emit('scoreUpdate', { players: room.players, room: trivia });
-    client
-      .in(roomId)
-      .emit('scoreUpdate', { players: room.players, room: trivia });
-
     return {
       event: 'Update score',
       data: `${userId}'s score has been updated`,
@@ -347,7 +176,7 @@ export class EventGateway {
     const now = new Date();
     const lastRequestTime = this.userRequests.get(body.player.userId);
 
-    console.log('PLAYER REQUESTED TO LEAVE');
+    console.log('PLAYER REQUESTED TO LEAVE', body.player.username);
     if (lastRequestTime && now.getTime() - lastRequestTime.getTime() < 1000)
       return {
         event: 'duplicate',
