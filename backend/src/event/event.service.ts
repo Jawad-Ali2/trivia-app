@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Player, Room, RoomStates, ScoreUpdateDTO } from './dto/room.dto';
+import {
+  LobbyType,
+  Player,
+  Room,
+  RoomStates,
+  ScoreUpdateDTO,
+} from './dto/room.dto';
 import { Socket } from 'socket.io';
 import {
   calculateScore,
@@ -60,8 +66,6 @@ export class EventService {
       players: rooms.get(roomId).players,
       questionNo: rooms.get(roomId).currentQuestionNo,
     });
-
-    console.log('Joined the lobby.', player.username);
 
     if (rooms.get(roomId).players.length === rooms.get(roomId).maxPlayers) {
       // const response = await axios.get('https://opentdb.com/api.php?amount=5');
@@ -237,13 +241,18 @@ export class EventService {
 
   createRoom(
     client: Socket,
+    roomId: string | null = null,
     rooms: Map<string, Room>,
     player: Player,
     roomSize: number,
     maxRounds: number = 2,
     questionsPerRound: number = 5,
+    roomType: LobbyType,
   ) {
-    const roomId: string = crypto.randomUUID();
+    if (!roomId) {
+      roomId = crypto.randomUUID();
+      if (roomType === LobbyType.PRIVATE) client.emit('privateRoomId', roomId);
+    }
 
     console.log('User has request to create lobby.', player.username);
 
@@ -257,7 +266,7 @@ export class EventService {
       round: 0,
       currentQuestionNo: 0,
       maxRounds: maxRounds - 1,
-      questionsPerRound: questionsPerRound - 1,
+      questionsPerRound: questionsPerRound ,
       gameResult: {
         roomId: roomId,
         playersPerformance: [
@@ -275,6 +284,7 @@ export class EventService {
         totalRounds: maxRounds,
         endTime: null,
       },
+      lobbyType: roomType,
     });
 
     client.emit('roomJoined', {
@@ -442,12 +452,12 @@ export class EventService {
   }
 
   async sendNextQuestionOrRound({ rooms, room, trivia, roomId, client }) {
-    if (room.currentQuestionNo < room.questionsPerRound) {
+    if (room.currentQuestionNo + 1 < room.questionsPerRound) {
       // Preparing next question
       const options = getShuffledOptions(
         room.questions[room.round][room.currentQuestionNo + 1]
           .incorrect_answers,
-        room.questions[room.round][room.currentQuestionNo + 1].correct_answer,
+          room.questions[room.round][room.currentQuestionNo + 1].correct_answer,
       );
       // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
       trivia.correctAnswer =
@@ -455,9 +465,9 @@ export class EventService {
       trivia.options = options;
       trivia.players = room.players;
       trivia.question =
-        room.questions[room.round][room.currentQuestionNo + 1].question;
+      room.questions[room.round][room.currentQuestionNo + 1].question;
       room.currentQuestionNo++;
-
+      
       client.emit('nextQuestion', {
         roomId: roomId,
         players: room.players,
@@ -479,7 +489,6 @@ export class EventService {
       room.currentQuestionNo = 0;
 
       if (room.round > room.maxRounds) {
-        console.log(room.round, room.maxRounds);
         room.gameResult.endTime = new Date();
         room.gameResult.winningPlayer = room.gameResult.playersPerformance.find(
           (player) => player.finalPosition === 1,

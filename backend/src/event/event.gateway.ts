@@ -11,7 +11,13 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { WsJwtGuard } from 'src/auth/guards/ws.guard';
 import { JwtService } from '@nestjs/jwt';
 import { SocketAuthMiddleware } from 'src/common/middlewares/ws.middleware';
-import { Player, Room, RoomStates, ScoreUpdateDTO } from './dto/room.dto';
+import {
+  LobbyType,
+  Player,
+  Room,
+  RoomStates,
+  ScoreUpdateDTO,
+} from './dto/room.dto';
 import { Throttle } from '@nestjs/throttler';
 import {
   calculateScore,
@@ -79,7 +85,8 @@ export class EventGateway {
       for (const [key, room] of this.rooms.entries()) {
         if (
           room.players.length < room.maxPlayers &&
-          room.state === RoomStates.WAITING
+          room.state === RoomStates.WAITING &&
+          room.lobbyType === LobbyType.PUBLIC
         ) {
           spaceAvailable = true;
           roomId = key;
@@ -91,7 +98,8 @@ export class EventGateway {
       // const availableRoom = Array.from(this.rooms.values()).find(room => room.players < room.maxPlayers);
       const roomSize = 2; // ! Hard coded change later
       const questionsPerRound = 5;
-      const maxRounds = 2;
+      const maxRounds = 5;
+      const roomType = LobbyType.PUBLIC;
 
       player.status = 'playing';
       if (spaceAvailable && roomId)
@@ -105,11 +113,13 @@ export class EventGateway {
       else {
         this.eventService.createRoom(
           client,
+          null, // This is the room Id
           this.rooms,
           player,
           roomSize,
           maxRounds,
           questionsPerRound,
+          roomType,
         );
       }
     } finally {
@@ -118,6 +128,73 @@ export class EventGateway {
 
     return { event: 'respone', data: 'Request Completed' };
     //  console.log(this.rooms);
+  }
+
+  async waitForUnlock(playerId: string) {
+    while (this.locks.get(playerId)) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  @SubscribeMessage('joinPrivateRoom')
+  async joinPrivateRoom(
+    @MessageBody() body: any,
+    @ConnectedSocket() client: Socket,
+  ) {
+    // If player emit this signal that means the body has private lobby type
+    const { roomType, player, roomId, roomSize, maxRounds, questionsPerRound } =
+      body;
+
+    if (!player) return { error: 'Something went wrong' };
+    const now = new Date();
+    const lastRequestTime = this.userRequests.get(player.userId);
+
+    if (lastRequestTime && now.getTime() - lastRequestTime.getTime() < 1000)
+      return {
+        event: 'duplicate',
+        data: 'Player sent too many requests at the same time',
+      };
+
+    // if (this.locks.get(player.userId)) {
+    //   return { event: 'duplicate', data: 'Request already processed' };
+    // }
+
+    await this.waitForUnlock(player.userId);
+
+    this.userRequests.set(player.userId, now);
+    this.locks.set(player.userId, true);
+
+    try {
+      const room = this.rooms.get(roomId);
+
+      if (!room) {
+        this.eventService.createRoom(
+          client,
+          roomId,
+          this.rooms,
+          player,
+          roomSize,
+          maxRounds,
+          questionsPerRound,
+          roomType,
+        );
+      } else {
+        if (room.players.length >= room.maxPlayers) {
+          console.log('Room has no space mayn sorry.');
+          return;
+        }
+        console.log('Joining');
+        await this.eventService.joinRoom(
+          client,
+          this.rooms,
+          roomId,
+          player,
+          roomSize,
+        );
+      }
+    } finally {
+      this.locks.delete(player.userId);
+    }
   }
 
   @SubscribeMessage('submitAnswer')

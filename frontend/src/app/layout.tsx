@@ -36,11 +36,11 @@ export default function RootLayout({
       >
         <AuthProvider>
           <TriviaProvider>
-            {/* <SocketProvider> */}
+            <SocketProvider>
               <Navbar />
               {children}
               <Toaster />
-            {/* </SocketProvider> */}
+            </SocketProvider>
           </TriviaProvider>
         </AuthProvider>
       </body>

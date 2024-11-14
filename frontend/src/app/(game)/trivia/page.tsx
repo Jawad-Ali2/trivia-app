@@ -1,9 +1,9 @@
 "use client";
 // components/TriviaInterface.tsx
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { socket } from "../server";
+// import { socket } from "../../server";
 import { useTrivia } from "@/store/TriviaProvider";
 import { useAuth } from "@/store/AuthProvider";
 import axiosInstance from "@/lib/axios";
@@ -13,17 +13,30 @@ import { GameResult, Player, User } from "@/lib/types";
 import TriviaQuestion from "@/components/Trivia";
 import Statistics from "@/components/Statistics";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter, useSearchParams } from "next/navigation";
+import PrivateRoomIdModal from "@/components/PrivateRoomIdModal";
+import { useSocket } from "@/store/SocketProvider";
+import { Socket } from "socket.io-client";
 
 const TriviaInterface = () => {
-  // Dummy data for players in the leaderboard
+  const searchParams = useSearchParams();
+
+  // Capture query parameters
+  const questions = searchParams.get("questions") || "";
+  const rounds = searchParams.get("rounds") || "";
+  const players = searchParams.get("players") || "";
+  const roomType = searchParams.get("roomType") || "";
+  const queryRoomId = searchParams.get("roomId") || "";
+
+  // if(roomType === "private" && (questions === "" || rounds === "" || players === "" || queryRoomId === ""))
+
   const [loadingGame, setLoadingGame] = useState(true); // Whenever the user opens this page they'll see waiting states
   const [timerCountdown, setTimerCountdown] = useState(5);
   const [isAfk, setIsAfk] = useState(false);
-
-  // Question and options (for demonstration purposes)
   const [socketConnection, setSocketConnection] = useState(false);
   const [transport, setTransport] = useState("N/A");
   const [closeStatisticsMenu, setCloseStatisticsMenu] = useState(true);
+  const [showPrivateRoomId, setShowPrivateRoomId] = useState(false);
   const { toast } = useToast();
   const authStore = useAuth();
   const { user } = authStore();
@@ -52,162 +65,202 @@ const TriviaInterface = () => {
     increasePlayerAfkCount,
   } = triviaStore();
 
+  const socketStore = useSocket();
+  const { getSocket } = socketStore();
+
+  const socket: Socket = useMemo(() => {
+    return getSocket();
+  }, []);
+
   useEffect(() => {
-    if (socket.connected) {
-      onConnect();
-    }
+    if (socket) {
+      if (socket.connected) {
+        onConnect();
+      }
 
-    // Once the component loads we request to join room
+      // Once the component loads we request to join room
 
-    if (user.userId) {
-      const currentUser: Player = {
-        ...user,
-        status: "playing",
-        score: 0,
-        correctAnswers: 0,
-        wrongAnswers: 0,
-        position: 0,
-        answered: false,
-      };
+      if (user.userId) {
+        const currentUser: Player = {
+          ...user,
+          status: "playing",
+          score: 0,
+          correctAnswers: 0,
+          wrongAnswers: 0,
+          position: 0,
+          answered: false,
+        };
 
-      socket.emit("joinRoom", {
-        player: currentUser,
-      });
-    }
+        if (roomType === "private") {
+          // roomType, player, roomId, roomSize, maxRounds, questionsPerRound
+            if (queryRoomId) {
+              // This means the player wants to join a lobby
+              socket.emit("joinPrivateRoom", {
+                roomType,
+                player: currentUser,
+                roomId: queryRoomId,
+                roomSize: parseInt(players),
+                maxRounds: parseInt(rounds),
+                questionsPerRound: parseInt(questions),
+              });
+            } else {
+              socket.emit("joinPrivateRoom", {
+                roomType,
+                player: currentUser,
+                roomId: null,
+                roomSize: parseInt(players),
+                maxRounds: parseInt(rounds),
+                questionsPerRound: parseInt(questions),
+              });
+            }
+          } else {
+          socket.emit("joinRoom", {
+            player: currentUser,
+          });
+        }
+      }
 
-    // Whenever the user loads the page they'll see different states of game loading
-    socket.on("roomJoined", ({ roomId, players, roomSize, questionNo }) => {
-      console.log("Joined the game");
+      // Whenever the user loads the page they'll see different states of game loading
+      socket.on("roomJoined", ({ roomId, players, roomSize, questionNo }) => {
+        console.log("Joined the game");
 
-      setRoomId(roomId);
-      setRoomSize(roomSize);
-
-      setTrivia({
-        players: players,
-        question: "",
-        correctAnswer: "0",
-        options: [],
-        round: 0,
-        questionNo: questionNo,
-      });
-    });
-
-    // ! Waiting For Player (1/4)
-    socket.on("playerJoined", ({ players, questionNo }) => {
-      console.log(" player Joined the game");
-
-      setPlayersCount(players.length);
-      setTrivia({
-        players: players,
-        question: "",
-        correctAnswer: "0",
-        options: [],
-        round: 0,
-        questionNo: questionNo,
-      });
-    });
-    // ! Preparing the room
-    // ! Start
-    socket.on(
-      "startGame",
-      ({ roomId, players, question, options, questionNo }) => {
-        console.log("START GAME");
         setRoomId(roomId);
+        setRoomSize(roomSize);
+
         setTrivia({
           players: players,
-          question: question.question,
-          correctAnswer: question.correct_answer,
-          // wrongAnswers: question.incorrect_answers,
-          options: options,
+          question: "",
+          correctAnswer: "0",
+          options: [],
           round: 0,
           questionNo: questionNo,
         });
-        setState("In Progress");
-      }
-    );
-
-    socket.on("scoreUpdate", ({ players, room }) => {
-      setTrivia({
-        ...room,
-        players: players,
       });
-    }); // Update score
 
-    socket.on(
-      "nextQuestion",
-      ({ roomId, players, question, options, round, questionNo }) => {
-        console.log("Next question");
+      // ! Waiting For Player (1/4)
+      socket.on("playerJoined", ({ players, questionNo }) => {
+        console.log(" player Joined the game");
+
+        setPlayersCount(players.length);
         setTrivia({
           players: players,
-          question: question.question,
-          correctAnswer: question.correct_answer,
-          options: options,
-          round: round,
+          question: "",
+          correctAnswer: "0",
+          options: [],
+          round: 0,
           questionNo: questionNo,
         });
-        setResetQuestionTimer(false);
-      }
-    );
-
-    socket.on(
-      "nextRound",
-      ({ roomId, players, question, options, round, questionNo }) => {
-        console.log("Next round");
-        setTrivia({
-          players: players,
-          question: question.question,
-          correctAnswer: question.correct_answer,
-          options: options,
-          round: round,
-          questionNo: questionNo,
-        });
-        setRoundEnded(false);
-        setResetQuestionTimer(false);
-      }
-    );
-
-    socket.on(
-      "roundFinished",
-      ({ roundFinished }: { roundFinished: boolean }) => {
-        setRoundEnded(roundFinished);
-        setResetQuestionTimer(true);
-      }
-    );
-
-    socket.on("playerLeft", ({ room, players }) => {
-      console.log("player left", room);
-      setTrivia({
-        ...room,
-        players: players,
       });
-    });
+      // ! Preparing the room
+      // ! Start
+      socket.on(
+        "startGame",
+        ({ roomId, players, question, options, questionNo }) => {
+          console.log("START GAME");
+          setRoomId(roomId);
+          setTrivia({
+            players: players,
+            question: question.question,
+            correctAnswer: question.correct_answer,
+            // wrongAnswers: question.incorrect_answers,
+            options: options,
+            round: 0,
+            questionNo: questionNo,
+          });
+          setState("In Progress");
+        }
+      );
 
-    socket.on("gameEnded", ({ results }: { results: GameResult }) => {
-      console.log("Game has finished");
-      setCloseStatisticsMenu(false);
-      setTriviaResult(results);
-    });
+      socket.on("scoreUpdate", ({ players, room }) => {
+        setTrivia({
+          ...room,
+          players: players,
+        });
+      }); // Update score
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
+      socket.on(
+        "nextQuestion",
+        ({ roomId, players, question, options, round, questionNo }) => {
+          console.log("Next question");
+          setTrivia({
+            players: players,
+            question: question.question,
+            correctAnswer: question.correct_answer,
+            options: options,
+            round: round,
+            questionNo: questionNo,
+          });
+          setResetQuestionTimer(false);
+        }
+      );
 
-    return () => {
-      if (socket.connected) {
-        socket.off("connect", onConnect);
-        socket.off("disconnect", onDisconnect);
-        socket.off("playerJoined");
-        socket.off("roomJoined");
-        socket.off("startGame");
-        socket.off("scoreUpdate");
-        socket.off("nextQuestion");
-        socket.off("nextRound");
-        socket.off("roundFinished");
-        socket.off("playerLeft");
-        socket.off("gameEnded");
-        onDisconnect();
-        leaveRoom(socket, user);
-      }
-    };
+      socket.on(
+        "nextRound",
+        ({ roomId, players, question, options, round, questionNo }) => {
+          console.log("Next round");
+          setTrivia({
+            players: players,
+            question: question.question,
+            correctAnswer: question.correct_answer,
+            options: options,
+            round: round,
+            questionNo: questionNo,
+          });
+          setRoundEnded(false);
+          setResetQuestionTimer(false);
+        }
+      );
+
+      socket.on(
+        "roundFinished",
+        ({ roundFinished }: { roundFinished: boolean }) => {
+          setRoundEnded(roundFinished);
+          setResetQuestionTimer(true);
+        }
+      );
+
+      socket.on("playerLeft", ({ room, players }) => {
+        console.log("player left", room);
+        setTrivia({
+          ...room,
+          players: players,
+        });
+      });
+
+      socket.on("gameEnded", ({ results }: { results: GameResult }) => {
+        console.log("Game has finished");
+        setCloseStatisticsMenu(false);
+        setTriviaResult(results);
+      });
+
+      socket.on("privateRoomId", (id) => {
+        console.log("This is the private room Id", id);
+        setRoomId(id);
+        setShowPrivateRoomId(true);
+      });
+
+      socket.on("connect", onConnect);
+      socket.on("disconnect", onDisconnect);
+
+      return () => {
+        if (socket.connected) {
+          socket.off("connect", onConnect);
+          socket.off("disconnect", onDisconnect);
+          socket.off("playerJoined");
+          socket.off("roomJoined");
+          socket.off("startGame");
+          socket.off("scoreUpdate");
+          socket.off("nextQuestion");
+          socket.off("nextRound");
+          socket.off("roundFinished");
+          socket.off("playerLeft");
+          socket.off("gameEnded");
+          socket.off("privateRoomId");
+          onDisconnect();
+          leaveRoom(socket, user);
+        }
+      };
+    }
   }, [user]);
 
   useEffect(() => {
@@ -236,20 +289,22 @@ const TriviaInterface = () => {
       });
     }
 
-    if (playerAfkCount === 2 && socket.connected && user) {
+    if (playerAfkCount === 2 && socket && socket.connected && user) {
       leaveRoom(socket, user);
       setIsAfk(true);
     }
   }, [playerAfkCount]);
 
   function onConnect() {
-    setSocketConnection(true);
+    if (socket) {
+      setSocketConnection(true);
 
-    setTransport(socket.io.engine.transport.name);
+      setTransport(socket.io.engine.transport.name);
 
-    socket.io.engine.on("upgrade", (transport) => {
-      setTransport(transport.name);
-    });
+      socket.io.engine.on("upgrade", (transport) => {
+        setTransport(transport.name);
+      });
+    }
   }
 
   function onDisconnect() {
@@ -292,6 +347,13 @@ const TriviaInterface = () => {
     <div className="flex justify-between bg-background p-6 h-screen bg-gradient-to-r from-primary to-secondary">
       {!closeStatisticsMenu && triviaResult && (
         <Statistics gameResult={triviaResult} onClose={closeStatistics} />
+      )}
+      {showPrivateRoomId && (
+        <PrivateRoomIdModal
+          isOpen={showPrivateRoomId}
+          onClose={() => setShowPrivateRoomId(false)}
+          roomId={roomId}
+        />
       )}
 
       <div className="absolute flex gap-3 text-white">
@@ -352,6 +414,7 @@ const TriviaInterface = () => {
         </div>
       ) : (
         <TriviaQuestion
+          socket={socket}
           user={user}
           trivia={trivia}
           roomId={roomId}

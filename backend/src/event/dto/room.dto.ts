@@ -39,7 +39,13 @@ export type Room = {
   maxRounds: number;
   questionsPerRound: number; // New field
   gameResult?: GameResult;
+  lobbyType: LobbyType;
 };
+
+export enum LobbyType {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+}
 
 export enum RoomStates {
   WAITING = 'Waiting',
@@ -67,7 +73,7 @@ export type ScoreUpdateDTO = {
   timeTaken: number;
   totalTime: number;
   givenOptions: string[];
-}
+};
 
 export type PlayerPerformance = {
   userId: string;

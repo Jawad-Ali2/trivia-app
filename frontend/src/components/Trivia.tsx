@@ -4,12 +4,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { useTrivia } from "@/store/TriviaProvider";
 import Leaderboard from "./Leaderboard";
-import { socket } from "@/app/server";
+// import { socket } from "@/app/server";
 import { ScoreUpdateDTO, Trivia, User } from "@/lib/types";
 import { setInterval, clearInterval } from "worker-timers";
 import GameOverlay from "./GameOverlay";
+import { Socket } from "socket.io-client";
 
 type TriviaProps= {
+  socket: Socket,
   user: User;
   trivia: Trivia;
   roomId: string;
@@ -22,6 +24,7 @@ type TriviaProps= {
 }
 
 function TriviaQuestion({
+  socket,
   user,
   trivia,
   roomId,
@@ -90,6 +93,7 @@ function TriviaQuestion({
       setSelectedAnswer(option);
       // Save the answer logic here...
       const isCorrect = trivia.correctAnswer === option;
+      console.log("Question no: ", trivia.questionNo);
 
       const answerSubmitDTO: ScoreUpdateDTO = {
         userId: user.userId,

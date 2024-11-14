@@ -86,7 +86,7 @@ export async function getQuestions(requiredQuestions: number) {
   //     },
   //   ],
   // };
-  const response = await axios.get('https://opentdb.com/api.php?amount=5');
+  const response = await axios.get(`https://opentdb.com/api.php?amount=${requiredQuestions}`);
 
   const data = response.data;
 
