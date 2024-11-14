@@ -74,6 +74,8 @@ export class EventGateway {
       return { event: 'duplicate', data: 'Request already processed' };
     }
 
+    await this.waitForUnlock(player.userId);
+
     this.userRequests.set(player.userId, now);
     this.locks.set(player.userId, true);
 
@@ -222,25 +224,36 @@ export class EventGateway {
         data: 'Player sent too many requests at the same time',
       };
 
-    this.userRequests.set(userId, now);
+    if (this.locks.get(userId)) {
+      return { event: 'duplicate', data: 'Request already processed' };
+    }
 
-    await this.eventService.submitQuestion({
-      userId,
-      trivia,
-      roomId,
-      optionSelected,
-      questionIndex,
-      isCorrect,
-      timeTaken,
-      totalTime,
-      givenOptions,
-      client,
-      rooms: this.rooms,
-    });
-    return {
-      event: 'Update score',
-      data: `${userId}'s score has been updated`,
-    };
+    await this.waitForUnlock(userId);
+
+    this.userRequests.set(userId, now);
+    this.locks.set(userId, true);
+
+    try {
+      await this.eventService.submitQuestion({
+        userId,
+        trivia,
+        roomId,
+        optionSelected,
+        questionIndex,
+        isCorrect,
+        timeTaken,
+        totalTime,
+        givenOptions,
+        client,
+        rooms: this.rooms,
+      });
+      return {
+        event: 'Update score',
+        data: `${userId}'s score has been updated`,
+      };
+    } finally {
+      this.locks.delete(userId);
+    }
   }
 
   @SubscribeMessage('startGame')

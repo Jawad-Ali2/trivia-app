@@ -266,7 +266,7 @@ export class EventService {
       round: 0,
       currentQuestionNo: 0,
       maxRounds: maxRounds - 1,
-      questionsPerRound: questionsPerRound ,
+      questionsPerRound: questionsPerRound,
       gameResult: {
         roomId: roomId,
         playersPerformance: [
@@ -336,6 +336,7 @@ export class EventService {
     );
 
     // If all the players have answered the question
+    console.log('User selected answer', optionSelected, room.maxPlayers === playersAnsweredCount + disconnectedPlayers);
     if (room.maxPlayers === playersAnsweredCount + disconnectedPlayers) {
       room.players.forEach((player) => {
         player.answered = false;
@@ -457,7 +458,7 @@ export class EventService {
       const options = getShuffledOptions(
         room.questions[room.round][room.currentQuestionNo + 1]
           .incorrect_answers,
-          room.questions[room.round][room.currentQuestionNo + 1].correct_answer,
+        room.questions[room.round][room.currentQuestionNo + 1].correct_answer,
       );
       // Todo: Maybe just emit nextRound and update the states in it so we don't have to emit scoreUpdate even after round finishes.....
       trivia.correctAnswer =
@@ -465,9 +466,10 @@ export class EventService {
       trivia.options = options;
       trivia.players = room.players;
       trivia.question =
-      room.questions[room.round][room.currentQuestionNo + 1].question;
+        room.questions[room.round][room.currentQuestionNo + 1].question;
+
       room.currentQuestionNo++;
-      
+
       client.emit('nextQuestion', {
         roomId: roomId,
         players: room.players,
@@ -484,7 +486,10 @@ export class EventService {
         round: room.round,
         questionNo: room.currentQuestionNo,
       });
+
+      console.log('Next question emitted');
     } else {
+      console.log('Next round emitted');
       room.round++;
       room.currentQuestionNo = 0;
 
