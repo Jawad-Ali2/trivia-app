@@ -7,6 +7,7 @@ import Image from "next/image";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/store/AuthProvider";
 import Login from "./Login";
+import Signup from "./Signup";
 
 export default function Navbar() {
   const store = useAuth();
@@ -15,6 +16,7 @@ export default function Navbar() {
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [isLoginModalOpen, setIsLoginModal] = useState<boolean>(false);
+  const [isSignupModalOpen, setIsSignupModal] = useState<boolean>(false);
 
   useEffect(() => {
     async function getUser() {
@@ -215,6 +217,16 @@ export default function Navbar() {
                 <Login
                   isOpen={isLoginModalOpen}
                   onClose={() => setIsLoginModal(false)}
+                />
+                <Button
+                  onClick={() => setIsSignupModal(true)}
+                  className="ml-4 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 transition-all"
+                >
+                  Signup
+                </Button>
+                <Signup
+                  isOpen={isSignupModalOpen}
+                  onClose={() => setIsSignupModal(false)}
                 />
               </>
             )}
